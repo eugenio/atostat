@@ -9,51 +9,12 @@ import ElectricPower
 import ElectricLogic
 import I2C
 import Capacitor
-import Resistor
+import Inductor
 
-from "ruben-iteng/dcdc-converters/evisun_b0505s1wr3.ato" import EVISUN_B0505S_1WR3_driver
+from "lib/b0505s_no_ycap.ato" import B0505S_NoYcap_driver
 from "atopile/ti-iso1640x/ti-iso1640x.ato" import TI_ISO1640QDWRQ1
 from "atopile/st-ldk220/st-ldk220.ato" import LDK220M_R
-# Real ISO7741_driver available in lib/iso7741.ato but kept as placeholder
-# here to avoid false short-circuit detection across isolation barrier
-
-
-# ISO7741 placeholder (real driver available in lib/iso7741.ato with component).
-# Kept as placeholder here to avoid false short-circuit detection across the
-# isolation barrier -- atopile sees host/isolated grounds bridged through B0505S
-# anti-EMI cap when a real dual-domain component instantiates both power rails.
-module ISO7741_placeholder:
-    """ISO7741 quad digital isolator placeholder with correct interfaces."""
-    power_a = new ElectricPower
-    """Host-side supply"""
-    power_a.required = True
-
-    power_b = new ElectricPower
-    """Isolated-side supply"""
-    power_b.required = True
-
-    inputs_a = new ElectricLogic[3]
-    """Host-side inputs (A->B direction)"""
-
-    outputs_b = new ElectricLogic[3]
-    """Isolated-side outputs (A->B direction)"""
-
-    input_b = new ElectricLogic
-    """Isolated-side input (B->A direction)"""
-
-    output_a = new ElectricLogic
-    """Host-side output (B->A direction)"""
-
-    # Decoupling on both sides
-    bypass_a = new Capacitor
-    bypass_a.capacitance = 100nF +/- 20%
-    bypass_a.package = "0402"
-    power_a.hv ~> bypass_a ~> power_a.lv
-
-    bypass_b = new Capacitor
-    bypass_b.capacitance = 100nF +/- 20%
-    bypass_b.package = "0402"
-    power_b.hv ~> bypass_b ~> power_b.lv
+from "lib/iso7741.ato" import ISO7741_driver
 
 
 module GalvanicIsolator:
@@ -98,8 +59,8 @@ module GalvanicIsolator:
     isolated_drdy = new ElectricLogic
     """Isolated ADC data-ready interrupt (isolated->host direction)"""
 
-    # --- Isolated DC-DC converter (5V to 5V) ---
-    dcdc = new EVISUN_B0505S_1WR3_driver
+    # --- Isolated DC-DC converter (5V to 5V, Y-cap removed) ---
+    dcdc = new B0505S_NoYcap_driver
 
     host_power ~ dcdc.power_in
     dcdc.power_out ~ isolated_power_raw
@@ -116,18 +77,11 @@ module GalvanicIsolator:
     isolated_power_raw ~ iso_ldo.power_in
     iso_ldo.power_out ~ isolated_power_clean
 
-    # Ferrite bead between raw and clean domains (placeholder as low-value resistor)
-    # In production, replace with a proper ferrite bead (e.g., BLM15AG601SN1D)
-    ferrite_raw_to_ldo = new Resistor
-    """Placeholder for ferrite bead between raw DC-DC output and LDO input.
-    In production use a real ferrite bead (~600 ohm @ 100 MHz)."""
-    ferrite_raw_to_ldo.resistance = 0.1ohm +/- 50%
-    ferrite_raw_to_ldo.package = "0402"
-
-    # Note: the ferrite is modeled but the LDO already has internal input filtering.
-    # For additional EMI suppression, insert ferrite_raw_to_ldo in the path:
-    # isolated_power_raw.hv ~> ferrite_raw_to_ldo ~> iso_ldo_input_node
-    # For now, the LDO input cap provides sufficient decoupling.
+    # Ferrite bead between raw DC-DC output and LDO input
+    # Murata BLM15AG601SN1D: 600 ohm @ 100 MHz, 300 mA, 0402
+    ferrite_raw_to_ldo = new Inductor
+    """Ferrite bead between raw DC-DC output and LDO input."""
+    ferrite_raw_to_ldo.lcsc_id = "C76884"
 
     # --- AVDD/DVDD separation with pi-filter (Task 3) ---
     # Pi-filter: cap - ferrite - cap between analog clean and digital domains.
@@ -139,12 +93,11 @@ module GalvanicIsolator:
     pi_cap_analog.package = "0805"
     isolated_power_clean.hv ~> pi_cap_analog ~> isolated_power_clean.lv
 
-    # Ferrite bead between AVDD and DVDD (placeholder as low-value resistor)
-    ferrite_avdd_dvdd = new Resistor
-    """Placeholder for ferrite bead separating AVDD from DVDD.
-    In production use a real ferrite bead (~600 ohm @ 100 MHz, 0402)."""
-    ferrite_avdd_dvdd.resistance = 0.1ohm +/- 50%
-    ferrite_avdd_dvdd.package = "0402"
+    # Ferrite bead between AVDD and DVDD
+    # Murata BLM15AG601SN1D: 600 ohm @ 100 MHz, 300 mA, 0402
+    ferrite_avdd_dvdd = new Inductor
+    """Ferrite bead separating AVDD from DVDD."""
+    ferrite_avdd_dvdd.lcsc_id = "C76884"
 
     # Post-ferrite cap (on digital side)
     pi_cap_digital = new Capacitor
@@ -173,30 +126,20 @@ module GalvanicIsolator:
     isolated_power_digital ~ i2c_iso.power_rails[1]
     isolated_i2c ~ i2c_iso.i2cs[1]
 
-    # --- Digital isolator for GPIO + DRDY (Task 4) ---
+    # --- Digital isolator for GPIO + DRDY ---
     # ISO7741: 3x A->B (host->isolated) + 1x B->A (isolated->host)
-    gpio_iso = new ISO7741_placeholder
+    gpio_iso = new ISO7741_driver
 
-    gpio_iso.power_a ~ host_power
-    gpio_iso.power_b ~ isolated_power_digital
+    gpio_iso.power_host ~ host_power
+    gpio_iso.power_isolated ~ isolated_power_digital
 
     # A->B channels: gain_select signals (host -> isolated)
-    # 3 channels available from this single ISO7741
-    for i in gpio_iso.outputs_b:
-        i.reference ~ isolated_power_digital
-
-    for i in gpio_iso.inputs_a:
-        i.reference ~ host_power
-
-    # Map outputs to isolated_gpio_out interface
-    gpio_iso.outputs_b[0] ~ isolated_gpio_out[0]
-    gpio_iso.outputs_b[1] ~ isolated_gpio_out[1]
-    gpio_iso.outputs_b[2] ~ isolated_gpio_out[2]
+    gpio_iso.isolated_out[0] ~ isolated_gpio_out[0]
+    gpio_iso.isolated_out[1] ~ isolated_gpio_out[1]
+    gpio_iso.isolated_out[2] ~ isolated_gpio_out[2]
 
     # B->A channel: ADC DRDY interrupt (isolated -> host)
-    gpio_iso.input_b.reference ~ isolated_power_digital
-    gpio_iso.output_a.reference ~ host_power
-    gpio_iso.output_a ~ isolated_drdy
+    gpio_iso.host_out ~ isolated_drdy
 
     # --- Decoupling: host side ---
     bulk_cap_host = new Capacitor

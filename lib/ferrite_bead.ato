@@ -1,23 +1,25 @@
 #pragma experiment("BRIDGE_CONNECT")
 
 """
-Ferrite bead wrapper module.
+Ferrite bead module using Murata BLM15AG601SN1D.
 
-Since atopile doesn't have a native Ferrite type, this wraps a Resistor
-with semantically clear naming and a documented impedance specification.
-In production, replace with a real ferrite bead (e.g., BLM15AG601SN1D,
-600 ohm @ 100 MHz, 0402 package).
+600 ohm @ 100 MHz, 300 mA rated current, 520 mohm DC resistance.
+0402 package. LCSC C76884.
+
+Modeled as an Inductor with LCSC ID since atopile has no native
+FerriteBead type. The component picker will select the correct
+part via the LCSC ID.
 """
 
-import Resistor
+import Inductor
+
 
 module FerriteBead:
     """
-    Ferrite bead modeled as a low-value resistor.
-    DC resistance ~0.1 ohm, impedance ~600 ohm @ 100 MHz.
+    Ferrite bead: 600 ohm @ 100 MHz, 300 mA, 0402.
+
+    Murata BLM15AG601SN1D (LCSC C76884).
+    Drop-in replacement for resistor placeholders used in earlier revisions.
     """
-    bead = new Resistor
-    bead.resistance = 0.1ohm +/- 50%
-    bead.package = "0402"
-    # Impedance at 100 MHz: ~600 ohm (BLM15AG601SN1D or equivalent)
-    # Rated current: 300 mA minimum
+    bead = new Inductor
+    bead.lcsc_id = "C76884"

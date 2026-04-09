@@ -1,0 +1,28 @@
+import has_designator_prefix
+import has_part_picked
+import is_atomic_part
+
+component SN74HC138_package:
+    """TI SN74HC138PWR 3-to-8 line decoder/demux, TSSOP-16."""
+
+    trait is_atomic_part<manufacturer="Texas Instruments", partnumber="SN74HC138PWR", footprint="TSSOP-16_L5.0-W4.4-P0.65-LS6.4-BL.kicad_mod", symbol="SN74HC138PWR.kicad_sym">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C157527", manufacturer="Texas Instruments", partno="SN74HC138PWR">
+    trait has_designator_prefix<prefix="U">
+
+    # TSSOP-16 pinout (74HC138 datasheet)
+    signal A0 ~ pin 1         # Address input LSB
+    signal A1 ~ pin 2         # Address input
+    signal A2 ~ pin 3         # Address input MSB
+    signal G2A ~ pin 4        # Active-low enable 1
+    signal G2B ~ pin 5        # Active-low enable 2
+    signal G1 ~ pin 6         # Active-high enable
+    signal Y7 ~ pin 7         # Output 7 (active low)
+    signal GND ~ pin 8        # Ground
+    signal Y6 ~ pin 9         # Output 6 (active low)
+    signal Y5 ~ pin 10        # Output 5 (active low)
+    signal Y4 ~ pin 11        # Output 4 (active low)
+    signal Y3 ~ pin 12        # Output 3 (active low)
+    signal Y2 ~ pin 13        # Output 2 (active low)
+    signal Y1 ~ pin 14        # Output 1 (active low)
+    signal Y0 ~ pin 15        # Output 0 (active low)
+    signal VCC ~ pin 16       # Supply voltage

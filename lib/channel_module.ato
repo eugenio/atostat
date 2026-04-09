@@ -64,6 +64,9 @@ module PotentiostatChannel:
     host_spi = new SPI
     """High-speed SPI from gateway to channel RP2040 (through SPI isolator)"""
 
+    host_spi_cs = new ElectricLogic
+    """SPI chip select from gateway CS demux (active low, through SPI isolator)"""
+
     ce = new ElectricSignal
     """Counter electrode connection"""
     ce.required = True
@@ -126,6 +129,7 @@ module PotentiostatChannel:
     spi_iso.isolated_spi ~ controller.host_spi
     spi_iso.isolated_cs ~ controller.host_spi_cs
     spi_iso.host_spi ~ host_spi
+    spi_iso.host_cs ~ host_spi_cs
 
     # --- DAC waveform generator ---
     # DAC I2C address: 0x0C — no conflict with ADC (0x2A), no mux needed

@@ -101,3 +101,6 @@ module App:
 
     # --- Host SPI to channel 0 ---
     ch0.host_spi ~ gateway.channel_spi
+
+    # --- Per-channel SPI chip select (via 74HC138 demux) ---
+    gateway.channel_cs[0] ~ ch0.host_spi_cs

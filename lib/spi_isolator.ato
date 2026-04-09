@@ -14,7 +14,7 @@ import ElectricLogic
 import SPI
 import Capacitor
 
-from "lib/galvanic_isolator.ato" import ISO7741_placeholder
+from "lib/iso7741.ato" import ISO7741_driver
 
 
 module SPIIsolator:
@@ -23,7 +23,7 @@ module SPIIsolator:
 
     3 channels host->isolated: SCLK, MOSI, CS
     1 channel isolated->host: MISO
-    DRDY is routed separately (needs additional isolator channel).
+    DRDY is routed separately through the GPIO isolator in galvanic_isolator.ato.
 
     Interfaces:
         host_power: Host-side supply (3.3V)
@@ -58,34 +58,25 @@ module SPIIsolator:
     # --- ISO7741 instance ---
     # 3x A->B (host->isolated): SCLK, MOSI, CS
     # 1x B->A (isolated->host): MISO
-    spi_iso = new ISO7741_placeholder
+    spi_iso = new ISO7741_driver
 
     # --- Power connections ---
-    host_power ~ spi_iso.power_a
-    isolated_power ~ spi_iso.power_b
+    host_power ~ spi_iso.power_host
+    isolated_power ~ spi_iso.power_isolated
 
     # --- Host->Isolated (A->B): SCLK, MOSI, CS ---
-    # Channel A0: SCLK
-    host_spi.sclk ~ spi_iso.inputs_a[0]
-    isolated_spi.sclk ~ spi_iso.outputs_b[0]
+    host_spi.sclk ~ spi_iso.host_in[0]
+    isolated_spi.sclk ~ spi_iso.isolated_out[0]
 
-    # Channel A1: MOSI
-    host_spi.mosi ~ spi_iso.inputs_a[1]
-    isolated_spi.mosi ~ spi_iso.outputs_b[1]
+    host_spi.mosi ~ spi_iso.host_in[1]
+    isolated_spi.mosi ~ spi_iso.isolated_out[1]
 
-    # Channel A2: CS (separate from SPI interface)
-    host_cs ~ spi_iso.inputs_a[2]
-    isolated_cs ~ spi_iso.outputs_b[2]
+    host_cs ~ spi_iso.host_in[2]
+    isolated_cs ~ spi_iso.isolated_out[2]
 
     # --- Isolated->Host (B->A): MISO ---
-    isolated_spi.miso ~ spi_iso.input_b
-    host_spi.miso ~ spi_iso.output_a
-
-    # --- DRDY path ---
-    # DRDY uses a SEPARATE isolator channel. Since the ISO7741's single B->A
-    # channel is used for MISO, DRDY must go through the GPIO isolator
-    # in galvanic_isolator.ato or a second ISO7741.
-    # TODO: Add second ISO7741 for DRDY + spare channels
+    isolated_spi.miso ~ spi_iso.isolated_in
+    host_spi.miso ~ spi_iso.host_out
 
     # --- Reference connections ---
     host_spi.sclk.reference ~ host_power

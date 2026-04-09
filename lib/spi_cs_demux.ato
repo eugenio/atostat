@@ -1,0 +1,93 @@
+#pragma experiment("BRIDGE_CONNECT")
+#pragma experiment("FOR_LOOP")
+
+"""
+SPI chip-select demux using TI SN74HC138 3-to-8 decoder.
+
+Allows a single SPI master (ESP32-S3 gateway) to address up to 8
+isolated channel RP2040 controllers using 3 GPIO address lines and
+the master CS signal.
+
+When the master asserts CS (active low), the decoder enables and
+drives the addressed output low, selecting that channel's SPI slave.
+When CS is deasserted, all outputs go high (all channels deselected).
+"""
+
+import ElectricPower
+import ElectricLogic
+import Capacitor
+
+from "parts/Texas_Instruments_SN74HC138PWR/Texas_Instruments_SN74HC138PWR.ato" import SN74HC138_package
+
+
+module SPIChipSelectDemux:
+    """
+    3-to-8 SPI chip-select demultiplexer.
+
+    The master SPI CS from the ESP32-S3 gates the decoder enable.
+    3 address GPIOs select which of the 8 channel CS outputs is active.
+    All outputs are active-low, matching SPI CS convention.
+
+    Interfaces:
+        power: 3.3V supply
+        master_cs: Master SPI chip select input (active low)
+        addr[3]: Channel address bits (A0=LSB, A2=MSB)
+        channel_cs[8]: Per-channel SPI chip select outputs (active low)
+    """
+
+    # --- External interfaces ---
+    power = new ElectricPower
+    """3.3V supply"""
+    power.required = True
+
+    master_cs = new ElectricLogic
+    """Master SPI CS from ESP32-S3 (active low). Gates the decoder."""
+
+    addr = new ElectricLogic[3]
+    """Channel address bits [A0, A1, A2] from ESP32-S3 GPIOs."""
+
+    channel_cs = new ElectricLogic[8]
+    """Per-channel SPI chip select outputs (active low)."""
+
+    # --- 74HC138 decoder ---
+    decoder = new SN74HC138_package
+
+    # --- Power ---
+    power.hv ~ decoder.VCC
+    power.lv ~ decoder.GND
+
+    # --- Address inputs ---
+    addr[0].line ~ decoder.A0
+    addr[1].line ~ decoder.A1
+    addr[2].line ~ decoder.A2
+
+    # --- Enable logic ---
+    # G1 (active high) = VCC (always enabled)
+    # G2A (active low) = master_cs (decoder active when CS asserted low)
+    # G2B (active low) = GND (always enabled)
+    decoder.G1 ~ power.hv
+    decoder.G2B ~ power.lv
+    master_cs.line ~ decoder.G2A
+
+    # --- Channel CS outputs (active low) ---
+    channel_cs[0].line ~ decoder.Y0
+    channel_cs[1].line ~ decoder.Y1
+    channel_cs[2].line ~ decoder.Y2
+    channel_cs[3].line ~ decoder.Y3
+    channel_cs[4].line ~ decoder.Y4
+    channel_cs[5].line ~ decoder.Y5
+    channel_cs[6].line ~ decoder.Y6
+    channel_cs[7].line ~ decoder.Y7
+
+    # --- Bypass capacitor ---
+    bypass = new Capacitor
+    bypass.capacitance = 100nF +/- 20%
+    bypass.package = "0402"
+    power.hv ~> bypass ~> power.lv
+
+    # --- Reference connections ---
+    master_cs.reference ~ power
+    for a in addr:
+        a.reference ~ power
+    for cs in channel_cs:
+        cs.reference ~ power

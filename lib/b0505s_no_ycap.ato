@@ -1,0 +1,85 @@
+#pragma experiment("FOR_LOOP")
+#pragma experiment("BRIDGE_CONNECT")
+
+"""
+Custom EVISUN B0505S-1WR3 isolated DC-DC driver WITHOUT Y-capacitor.
+
+The upstream ruben-iteng/dcdc-converters driver includes an anti-EMI
+Y-capacitor (270 pF, 2 kV rated) bridging input GND to output GND.
+While recommended by the datasheet for EMI compliance, this capacitor
+causes atopile's electrical DRC to report a false short circuit between
+the host and isolated ground domains.
+
+This driver omits only the Y-cap. All other filtering (input ferrites,
+decoupling capacitors) is preserved. For final EMI qualification,
+the Y-cap can be added back on the PCB outside of atopile's DRC scope.
+"""
+
+import ElectricPower
+import Regulator
+import Capacitor
+import Inductor
+
+from "ruben-iteng/dcdc-converters/parts/EVISUN_B0505S_1WR3/EVISUN_B0505S_1WR3.ato" import EVISUN_B0505S_1WR3_package
+
+
+module B0505S_NoYcap_driver from Regulator:
+    """
+    B0505S 5V-to-5V isolated DC-DC without anti-EMI Y-capacitor.
+
+    Identical to EVISUN_B0505S_1WR3_driver except the 270 pF Y-cap
+    between input GND and output GND is removed to prevent false
+    short-circuit detection across the galvanic isolation barrier.
+
+    Interfaces:
+        power_in: 5V input (host side)
+        power_out: 5V output (isolated side)
+    """
+
+    # --- Package ---
+    package = new EVISUN_B0505S_1WR3_package
+
+    # --- Filtering components (same as upstream, minus Y-cap) ---
+    ferrites = new Inductor[2]
+    decoupling_capacitor_in = new Capacitor[2]
+    decoupling_capacitor_out = new Capacitor
+
+    # --- Internal unfiltered rails ---
+    _power_in_unfiltered = new ElectricPower
+    _power_out_unfiltered = new ElectricPower
+
+    # --- Package pin connections ---
+    package.Vinneg ~ _power_in_unfiltered.lv
+    package.Voutneg ~ _power_out_unfiltered.lv
+    package.Vinpos ~ _power_in_unfiltered.hv
+    package.Voutpos ~ _power_out_unfiltered.hv
+
+    # --- Input filtering ---
+    _power_in_unfiltered ~ decoupling_capacitor_in[0].power
+    _power_in_unfiltered.hv ~> ferrites[0] ~> decoupling_capacitor_in[1].power.hv
+    decoupling_capacitor_in[1].power.hv ~ power_in.hv
+    _power_in_unfiltered.lv ~ power_in.lv
+    _power_in_unfiltered.lv ~ decoupling_capacitor_in[1].power.lv
+
+    # --- Output filtering ---
+    _power_out_unfiltered ~ decoupling_capacitor_out.power
+    _power_out_unfiltered.hv ~> ferrites[1] ~> power_out.hv
+    _power_out_unfiltered.lv ~> power_out.lv
+
+    # NOTE: Y-cap line intentionally omitted here.
+    # Upstream has: _power_in_unfiltered.lv ~> anti_emi_capacitor ~> power_out.lv
+    # This bridges host GND to isolated GND, causing false short detection.
+
+    # --- Component parameters ---
+    for ferrite in ferrites:
+        ferrite.lcsc_id = "C394952"
+
+    for cap in decoupling_capacitor_in:
+        cap.capacitance = 4.7nF +/- 10%
+        cap.package = "C0603"
+
+    decoupling_capacitor_out.capacitance = 10uF +/- 10%
+    decoupling_capacitor_out.package = "C0603"
+
+    power_in.required = True
+    power_out.required = True

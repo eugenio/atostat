@@ -21,11 +21,13 @@ import I2C
 import SPI
 import USB2_0
 import Resistor
+import Inductor
 import Capacitor
 
 from "atopile/espressif-esp32-s3/espressif-esp32-s3.ato" import Espressif_ESP32_S3
 from "atopile/ti-tca9548a/ti-tca9548a.ato" import TI_TCA9548A
 from "lib/can_bus.ato" import CANBus
+from "lib/spi_cs_demux.ato" import SPIChipSelectDemux
 
 
 module ConnectivityGateway:
@@ -53,11 +55,10 @@ module ConnectivityGateway:
     mcu_power = new ElectricPower
     """Filtered 3.3V supply for ESP32-S3 MCU"""
 
-    wifi_ferrite = new Resistor
-    """Placeholder for ferrite bead between main 3.3V and MCU supply.
-    In production use a real ferrite bead (~600 ohm @ 100 MHz, 0402)."""
-    wifi_ferrite.resistance = 0.1ohm +/- 50%
-    wifi_ferrite.package = "0402"
+    wifi_ferrite = new Inductor
+    """Ferrite bead between main 3.3V and MCU supply.
+    Murata BLM15AG601SN1D: 600 ohm @ 100 MHz, 300 mA, 0402."""
+    wifi_ferrite.lcsc_id = "C76884"
 
     wifi_bulk_cap = new Capacitor
     """100uF bulk capacitor for WiFi TX burst current demand"""
@@ -182,6 +183,30 @@ module ConnectivityGateway:
     channel_spi = new SPI
     """SPI bus for high-speed communication with channel RP2040 controllers"""
     channel_spi ~ mcu.spi
+
+    # --- Per-channel SPI chip-select demux (74HC138) ---
+    cs_demux = new SPIChipSelectDemux
+    """3-to-8 decoder demuxing master SPI CS to individual channel CS lines"""
+    cs_demux.power ~ mcu_power
+
+    # Master CS from ESP32 SPI peripheral (directly from spi cs gpio)
+    cs_demux.master_cs ~ mcu.io[10]
+
+    # Address lines from ESP32 GPIOs (IO21, IO38, IO39)
+    cs_demux.addr[0] ~ mcu.io[21]
+    cs_demux.addr[1] ~ mcu.io[38]
+    cs_demux.addr[2] ~ mcu.io[39]
+
+    channel_cs = new ElectricLogic[8]
+    """Per-channel SPI chip select outputs (active low), exposed for top-level wiring"""
+    channel_cs[0] ~ cs_demux.channel_cs[0]
+    channel_cs[1] ~ cs_demux.channel_cs[1]
+    channel_cs[2] ~ cs_demux.channel_cs[2]
+    channel_cs[3] ~ cs_demux.channel_cs[3]
+    channel_cs[4] ~ cs_demux.channel_cs[4]
+    channel_cs[5] ~ cs_demux.channel_cs[5]
+    channel_cs[6] ~ cs_demux.channel_cs[6]
+    channel_cs[7] ~ cs_demux.channel_cs[7]
 
     # --- Additional power bypass for I2C mux ---
     mux_bypass = new Capacitor
