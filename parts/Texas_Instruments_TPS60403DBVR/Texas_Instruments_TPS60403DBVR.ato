@@ -1,0 +1,18 @@
+import has_designator_prefix
+import has_part_picked
+import is_atomic_part
+
+component TPS60403_package:
+    """TPS60403DBVR SOT-23-5 unregulated charge pump voltage inverter."""
+
+    trait is_atomic_part<manufacturer="Texas Instruments", partnumber="TPS60403DBVR", footprint="SOT-23-5_L3.0-W1.7-P0.95-LS2.8-BL.kicad_mod", symbol="TPS60403DBVR.kicad_sym", model="SOT-23-5_L2.9-W1.6-H1.1-LS2.8-P0.95.step">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C29561", manufacturer="Texas Instruments", partno="TPS60403DBVR">
+    trait has_designator_prefix<prefix="U">
+
+    # SOT-23-5 pinout (TPS60403DBVR)
+    # Pin 1 = VIN, Pin 2 = GND, Pin 3 = VOUT, Pin 4 = NC, Pin 5 = CAP+
+    pin 1
+    pin 2
+    pin 3
+    pin 4
+    pin 5

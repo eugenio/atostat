@@ -1,0 +1,276 @@
+#pragma experiment("FOR_LOOP")
+#pragma experiment("BRIDGE_CONNECT")
+
+"""
+Switched-gain transimpedance amplifier (TIA) for potentiostat current measurement.
+
+Eight switchable gain ranges cover 10 nA to 100 mA full-scale current using
+feedback resistors from 20 Ohm to 100 MOhm. Two MAX14778 dual 4:1 analog
+multiplexers select the active feedback path (mux_a for high-impedance ranges
+0-3, mux_b for low-impedance ranges 4-7). A TS5A22362 SPDT analog switch
+selects which mux output feeds the TIA feedback path.
+
+Each gain resistor has a parallel bandwidth-limiting capacitor to reduce noise.
+
+Uses one section of the AD8608 quad op-amp (section A for TIA).
+"""
+
+import ElectricPower
+import Electrical
+import ElectricSignal
+import ElectricLogic
+import Resistor
+import Capacitor
+
+from "ruben-iteng/analog-devices-max14778/analog_devices-max14778.ato" import Analog_Devices_MAX14778_Driver
+from "atopile/ti-ts5a22362/ti-ts5a22362.ato" import Texas_Instruments_TS5A22362DGSR
+from "lib/ad8608.ato" import AD8608_Quad
+
+
+module SwitchedGainTIA:
+    """
+    8-range switched-gain transimpedance amplifier for current measurement.
+
+    Gain ranges (feedback resistor -> full-scale current at ~1V output):
+        Range 0 (mux_a ch0): 100 MOhm -> 10 nA FS (highest sensitivity)
+        Range 1 (mux_a ch1): 20 MOhm  -> 100 nA FS
+        Range 2 (mux_a ch2): 2 MOhm   -> 1 uA FS
+        Range 3 (mux_a ch3): 200 kOhm -> 10 uA FS
+        Range 4 (mux_b ch0): 20 kOhm  -> 100 uA FS
+        Range 5 (mux_b ch1): 2 kOhm   -> 1 mA FS
+        Range 6 (mux_b ch2): 200 Ohm  -> 10 mA FS
+        Range 7 (mux_b ch3): 20 Ohm   -> 100 mA FS
+
+    Interfaces:
+        power: Supply rails for the TIA op-amp and muxes
+        we_input: Working electrode current input
+        current_output: Analog voltage output proportional to measured current
+        gain_select_a: 2-bit address for mux A (ranges 0-3)
+        gain_select_b: 2-bit address for mux B (ranges 4-7)
+        gain_select_bank: Bank select -- LOW selects mux A, HIGH selects mux B
+        ground_ref: Ground reference for TIA non-inverting input
+        opamp_quad: AD8608 quad op-amp (sections B-D available for other modules)
+    """
+
+    # --- External interfaces ---
+    power = new ElectricPower
+    """Supply power for TIA and multiplexers"""
+    power.required = True
+
+    we_input = new ElectricSignal
+    """Working electrode current input signal"""
+    we_input.required = True
+
+    current_output = new ElectricSignal
+    """Analog voltage output proportional to measured current"""
+    current_output.required = True
+
+    gain_select_a = new ElectricLogic[2]
+    """2-bit mux A address lines (select among ranges 0-3)"""
+
+    gain_select_b = new ElectricLogic[2]
+    """2-bit mux B address lines (select among ranges 4-7)"""
+
+    gain_select_bank = new ElectricLogic
+    """Bank select: LOW = mux A (high-Z ranges), HIGH = mux B (low-Z ranges)"""
+
+    ground_ref = new Electrical
+    """Ground reference for TIA non-inverting input -- connect to isolated ground"""
+
+    # --- AD8608 quad op-amp (section A for TIA) ---
+    opamp_quad = new AD8608_Quad
+    """Quad op-amp -- section A used for TIA"""
+
+    opamp_quad.power ~ power
+
+    # --- Op-amp connections ---
+    # Working electrode connects to inverting input (summing junction)
+    we_input.line ~ opamp_quad.a_inverting
+
+    # Non-inverting input connected to ground reference
+    opamp_quad.a_noninverting ~ ground_ref
+
+    # Output
+    current_output.line ~ opamp_quad.a_output
+
+    # --- P2 fix: BAT54S Schottky clamp diodes on summing junction ---
+    # TODO: Add BAT54S (dual series Schottky) as back-to-back clamp diodes
+    # from summing junction (opamp_quad.a_inverting) to power rails (power.hv, power.lv).
+    # This limits the voltage at the summing junction to within one diode drop
+    # of the supply rails, protecting the op-amp input during overrange conditions.
+    # Placeholder -- no diode package available yet.
+
+    # --- Internal feedback node ---
+    # Both mux common pins feed into the bank-select switch; the selected one
+    # connects to the op-amp inverting input (summing junction).
+    signal feedback_node
+    feedback_node ~ opamp_quad.a_inverting
+
+    # ---------------------------------------------------------------
+    # Mux A: high-impedance ranges 0-3 (100M, 20M, 2M, 200k)
+    # Uses side A of the first MAX14778
+    # ---------------------------------------------------------------
+    mux_a = new Analog_Devices_MAX14778_Driver
+    mux_a.power ~ power
+
+    # Address lines for mux A (use side A of the dual mux)
+    mux_a.selector_a[0] ~ gain_select_a[0]
+    mux_a.selector_a[1] ~ gain_select_a[1]
+
+    # Enable mux A side A always (active high per MAX14778)
+    mux_a_enable_pullup = new Resistor
+    mux_a_enable_pullup.resistance = 10kohm +/- 5%
+    mux_a_enable_pullup.package = "0402"
+    mux_a.enable_a.line ~> mux_a_enable_pullup ~> power.hv
+
+    # Disable mux A side B (unused) by tying enable low
+    mux_a_enb_pulldown = new Resistor
+    mux_a_enb_pulldown.resistance = 10kohm +/- 5%
+    mux_a_enb_pulldown.package = "0402"
+    mux_a.enable_b.line ~> mux_a_enb_pulldown ~> power.lv
+
+    # ---------------------------------------------------------------
+    # Mux B: low-impedance ranges 4-7 (20k, 2k, 200, 20 Ohm)
+    # Uses side A of the second MAX14778
+    # ---------------------------------------------------------------
+    mux_b = new Analog_Devices_MAX14778_Driver
+    mux_b.power ~ power
+
+    # Address lines for mux B (use side A of the dual mux)
+    mux_b.selector_a[0] ~ gain_select_b[0]
+    mux_b.selector_a[1] ~ gain_select_b[1]
+
+    # Enable mux B side A always
+    mux_b_enable_pullup = new Resistor
+    mux_b_enable_pullup.resistance = 10kohm +/- 5%
+    mux_b_enable_pullup.package = "0402"
+    mux_b.enable_a.line ~> mux_b_enable_pullup ~> power.hv
+
+    # Disable mux B side B (unused) by tying enable low
+    mux_b_enb_pulldown = new Resistor
+    mux_b_enb_pulldown.resistance = 10kohm +/- 5%
+    mux_b_enb_pulldown.package = "0402"
+    mux_b.enable_b.line ~> mux_b_enb_pulldown ~> power.lv
+
+    # ---------------------------------------------------------------
+    # Bank-select SPDT switch (TS5A22362)
+    # Selects which mux output feeds the TIA feedback path.
+    # Uses switch channel 1:
+    #   NC1 = mux_a common (selected when IN1=LOW -> bank A)
+    #   NO1 = mux_b common (selected when IN1=HIGH -> bank B)
+    #   COM1 = feedback_node (to op-amp summing junction)
+    # ---------------------------------------------------------------
+    bank_switch = new Texas_Instruments_TS5A22362DGSR
+    bank_switch.power ~ power
+
+    # Bank select control signal
+    bank_switch.enables[0] ~ gain_select_bank
+
+    # NC path (LOW = bank A): mux A common -> feedback node
+    mux_a.common_a ~ bank_switch.switches_nc[0].unnamed[0]
+    bank_switch.switches_nc[0].unnamed[1] ~ feedback_node
+
+    # NO path (HIGH = bank B): mux B common -> feedback node
+    mux_b.common_a ~ bank_switch.switches_no[0].unnamed[0]
+    bank_switch.switches_no[0].unnamed[1] ~ feedback_node
+
+    # Tie second switch channel enable low (unused)
+    bank_sw_en2_pulldown = new Resistor
+    bank_sw_en2_pulldown.resistance = 10kohm +/- 5%
+    bank_sw_en2_pulldown.package = "0402"
+    bank_switch.enables[1].line ~> bank_sw_en2_pulldown ~> power.lv
+
+    # ---------------------------------------------------------------
+    # Feedback resistors -- 8 decade-spaced gain ranges
+    # Each resistor connects from a mux channel input to the op-amp output.
+    # A parallel capacitor on each range limits bandwidth and reduces noise.
+    # ---------------------------------------------------------------
+
+    # --- Range 0: 100 MOhm (10 nA FS) --- (mux_a channel 0)
+    r_gain_0 = new Resistor
+    r_gain_0.resistance = 100Mohm +/- 5%
+    r_gain_0.package = "0805"
+    c_bw_0 = new Capacitor
+    c_bw_0.capacitance = 4.7pF +/- 20%
+    c_bw_0.package = "0402"
+    mux_a.output_a[0] ~> r_gain_0 ~> opamp_quad.a_output
+    mux_a.output_a[0] ~> c_bw_0 ~> opamp_quad.a_output
+
+    # --- Range 1: 20 MOhm (100 nA FS) --- (mux_a channel 1)
+    r_gain_1 = new Resistor
+    r_gain_1.resistance = 20Mohm +/- 1%
+    r_gain_1.package = "0603"
+    c_bw_1 = new Capacitor
+    c_bw_1.capacitance = 4.7pF +/- 20%
+    c_bw_1.package = "0402"
+    mux_a.output_a[1] ~> r_gain_1 ~> opamp_quad.a_output
+    mux_a.output_a[1] ~> c_bw_1 ~> opamp_quad.a_output
+
+    # --- Range 2: 2 MOhm (1 uA FS) --- (mux_a channel 2)
+    r_gain_2 = new Resistor
+    r_gain_2.resistance = 2Mohm +/- 1%
+    r_gain_2.package = "0603"
+    c_bw_2 = new Capacitor
+    c_bw_2.capacitance = 47pF +/- 20%
+    c_bw_2.package = "0402"
+    mux_a.output_a[2] ~> r_gain_2 ~> opamp_quad.a_output
+    mux_a.output_a[2] ~> c_bw_2 ~> opamp_quad.a_output
+
+    # --- Range 3: 200 kOhm (10 uA FS) --- (mux_a channel 3)
+    r_gain_3 = new Resistor
+    r_gain_3.resistance = 200kohm +/- 1%
+    r_gain_3.package = "0402"
+    c_bw_3 = new Capacitor
+    c_bw_3.capacitance = 47pF +/- 20%
+    c_bw_3.package = "0402"
+    mux_a.output_a[3] ~> r_gain_3 ~> opamp_quad.a_output
+    mux_a.output_a[3] ~> c_bw_3 ~> opamp_quad.a_output
+
+    # --- Range 4: 20 kOhm (100 uA FS) --- (mux_b channel 0)
+    r_gain_4 = new Resistor
+    r_gain_4.resistance = 20kohm +/- 1%
+    r_gain_4.package = "0402"
+    c_bw_4 = new Capacitor
+    c_bw_4.capacitance = 470pF +/- 20%
+    c_bw_4.package = "0402"
+    mux_b.output_a[0] ~> r_gain_4 ~> opamp_quad.a_output
+    mux_b.output_a[0] ~> c_bw_4 ~> opamp_quad.a_output
+
+    # --- Range 5: 2 kOhm (1 mA FS) --- (mux_b channel 1)
+    r_gain_5 = new Resistor
+    r_gain_5.resistance = 2kohm +/- 1%
+    r_gain_5.package = "0402"
+    c_bw_5 = new Capacitor
+    c_bw_5.capacitance = 470pF +/- 20%
+    c_bw_5.package = "0402"
+    mux_b.output_a[1] ~> r_gain_5 ~> opamp_quad.a_output
+    mux_b.output_a[1] ~> c_bw_5 ~> opamp_quad.a_output
+
+    # --- Range 6: 200 Ohm (10 mA FS) --- (mux_b channel 2)
+    r_gain_6 = new Resistor
+    r_gain_6.resistance = 200ohm +/- 1%
+    r_gain_6.package = "0402"
+    c_bw_6 = new Capacitor
+    c_bw_6.capacitance = 4.7nF +/- 20%
+    c_bw_6.package = "0402"
+    mux_b.output_a[2] ~> r_gain_6 ~> opamp_quad.a_output
+    mux_b.output_a[2] ~> c_bw_6 ~> opamp_quad.a_output
+
+    # --- Range 7: 20 Ohm (100 mA FS) --- (mux_b channel 3)
+    r_gain_7 = new Resistor
+    r_gain_7.resistance = 20ohm +/- 1%
+    r_gain_7.package = "0402"
+    c_bw_7 = new Capacitor
+    c_bw_7.capacitance = 4.7nF +/- 20%
+    c_bw_7.package = "0402"
+    mux_b.output_a[3] ~> r_gain_7 ~> opamp_quad.a_output
+    mux_b.output_a[3] ~> c_bw_7 ~> opamp_quad.a_output
+
+    # --- Reference assignments ---
+    we_input.reference ~ power
+    current_output.reference ~ power
+    for gl in gain_select_a:
+        gl.reference ~ power
+    for gl in gain_select_b:
+        gl.reference ~ power
+    gain_select_bank.reference ~ power

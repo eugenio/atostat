@@ -1,0 +1,23 @@
+#pragma experiment("BRIDGE_CONNECT")
+
+"""
+Ferrite bead wrapper module.
+
+Since atopile doesn't have a native Ferrite type, this wraps a Resistor
+with semantically clear naming and a documented impedance specification.
+In production, replace with a real ferrite bead (e.g., BLM15AG601SN1D,
+600 ohm @ 100 MHz, 0402 package).
+"""
+
+import Resistor
+
+module FerriteBead:
+    """
+    Ferrite bead modeled as a low-value resistor.
+    DC resistance ~0.1 ohm, impedance ~600 ohm @ 100 MHz.
+    """
+    bead = new Resistor
+    bead.resistance = 0.1ohm +/- 50%
+    bead.package = "0402"
+    # Impedance at 100 MHz: ~600 ohm (BLM15AG601SN1D or equivalent)
+    # Rated current: 300 mA minimum

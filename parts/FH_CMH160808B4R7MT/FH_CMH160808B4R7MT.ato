@@ -1,0 +1,19 @@
+import has_datasheet
+import has_designator_prefix
+import has_part_picked
+import is_atomic_part
+import is_auto_generated
+
+component FH_CMH160808B4R7MT_package:
+    # This trait marks this file as auto-generated
+    # If you want to manually change it, remove the trait
+    trait is_auto_generated<system="ato_part", source="easyeda:C394952", date="2026-04-09T10:49:25.720253+00:00", checksum="286c0bdbb016c55c4a7447d8ed13c0e30a893a1932920d4be4eff6c9967bb2b4">
+
+    trait is_atomic_part<manufacturer="FH", partnumber="CMH160808B4R7MT", footprint="L0603.kicad_mod", symbol="CMH160808B4R7MT.kicad_sym", model="L0603_L1.6-W0.8-H0.5_BEAD.step">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C394952", manufacturer="FH", partno="CMH160808B4R7MT">
+    trait has_designator_prefix<prefix="L">
+    trait has_datasheet<datasheet="https://wmsc.lcsc.com/wmsc/upload/file/pdf/v2/lcsc/2302231208_FH--Guangdong-Fenghua-Advanced-Tech-CMH160808B4R7MT_C394952.pdf">
+
+    # pins
+    pin 1
+    pin 2

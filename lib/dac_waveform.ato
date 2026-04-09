@@ -1,0 +1,201 @@
+#pragma experiment("BRIDGE_CONNECT")
+
+"""
+DAC waveform generator module for potentiostat cell voltage control.
+
+Uses the Analog Devices AD5693R (16-bit DAC) with:
+  - Switchable output RC filter (1kohm + 100nF => f_c ~1.6kHz, bypassable)
+  - Bipolar level-shifting subtractor (V_out = V_dac - V_ref => +-2.5V)
+
+The AD5693R outputs 0 to 5V (unipolar, with 2x gain on internal 2.5V ref).
+A precision difference amplifier subtracts V_ref (2.5V) to produce +-2.5V
+bipolar output suitable for applying negative potentials to the cell.
+"""
+
+import ElectricPower
+import Electrical
+import I2C
+import ElectricSignal
+import ElectricLogic
+import Resistor
+import Capacitor
+
+from "atopile/adi-ad5693r/adi-ad5693r.ato" import ADI_AD5693R
+from "atopile/ti-ts5a22362/ti-ts5a22362.ato" import Texas_Instruments_TS5A22362DGSR
+from "lib/ad8608.ato" import AD8608_Quad
+
+
+module DACWaveform:
+    """
+    16-bit DAC with bipolar output and switchable filtering.
+
+    The AD5693R internal reference is 2.5V; with 2x gain the output is 0-5V.
+    A precision subtractor removes the 2.5V offset to produce +-2.5V output.
+
+    Interfaces:
+        power: 3.3V or 5V supply (2.7V to 5.5V supported)
+        i2c: I2C bus (address 0x0C or 0x0D via A0 pin)
+        voltage_output: Bipolar analog output (+-2.5V) to control amplifier v_set
+        voltage_output_raw: Unipolar output (0-5V, before subtraction) for diagnostics
+        v_ref: Reference voltage from AD5693R (2.5V) -- available externally
+        reset: Active-low reset (ElectricLogic)
+        ldac: Load DAC pin (ElectricLogic)
+        filter_bypass: Control to bypass the 1.6kHz RC filter (HIGH = bypass)
+    """
+
+    # --- External interfaces ---
+    power = new ElectricPower
+    """Supply power for the DAC (3.3V or 5V)"""
+    power.required = True
+    assert power.voltage within 2.7V to 5.5V
+
+    i2c = new I2C
+    """I2C bus interface"""
+    i2c.required = True
+
+    voltage_output = new ElectricSignal
+    """Bipolar analog output (+-2.5V) to control amplifier v_set input"""
+    voltage_output.required = True
+
+    voltage_output_raw = new ElectricSignal
+    """Unipolar output (0-5V, after filter, before subtraction) for diagnostics"""
+
+    v_ref = new ElectricSignal
+    """Reference voltage output from AD5693R (2.5V) -- for external use"""
+
+    reset = new ElectricLogic
+    """Active-low reset pin"""
+
+    ldac = new ElectricLogic
+    """Active-low load DAC pin"""
+
+    filter_bypass = new ElectricLogic
+    """HIGH = bypass 1.6kHz filter (full bandwidth), LOW = filter engaged"""
+
+    # --- AD5693R instance ---
+    dac = new ADI_AD5693R
+    """16-bit DAC with internal 2.5V reference"""
+
+    # --- Power connection ---
+    power ~ dac.power
+
+    # --- I2C connection ---
+    i2c ~ dac.i2c
+
+    # --- Control pin passthrough ---
+    reset.line ~ dac.reset.line
+    reset.reference ~ power
+    ldac.line ~ dac.ldac.line
+    ldac.reference ~ power
+
+    # --- Expose reference voltage ---
+    v_ref.line ~ dac.vref.hv
+    v_ref.reference ~ power
+
+    # ---------------------------------------------------------------
+    # Switchable output RC filter
+    # 1kohm + 100nF low-pass (~1.6kHz cutoff) to smooth DAC steps.
+    # TS5A22362 bypasses the filter resistor for full-bandwidth operation.
+    # ---------------------------------------------------------------
+    filter_resistor = new Resistor
+    filter_resistor.resistance = 1kohm +/- 1%
+    filter_resistor.package = "0402"
+
+    filter_capacitor = new Capacitor
+    filter_capacitor.capacitance = 100nF +/- 20%
+    filter_capacitor.package = "0402"
+
+    # Internal nodes
+    signal dac_raw_out
+    signal filtered_node
+
+    dac_raw_out ~ dac.dac_out.line
+
+    # Filter bypass switch (TS5A22362)
+    # Switch 1 NC = through filter resistor (default, filter engaged)
+    # Switch 1 NO = direct bypass (filter bypassed)
+    filter_switch = new Texas_Instruments_TS5A22362DGSR
+    filter_switch.power ~ power
+
+    # Control: HIGH bypasses the filter
+    filter_switch.enables[0] ~ filter_bypass
+
+    # NC path (LOW = filter engaged): dac_raw_out -> filter_resistor -> filtered_node
+    dac_raw_out ~> filter_resistor ~> filtered_node
+
+    # NO path (HIGH = bypass): dac_raw_out -> direct -> filtered_node
+    filter_switch.switches_no[0].unnamed[0] ~ dac_raw_out
+    filter_switch.switches_no[0].unnamed[1] ~ filtered_node
+
+    # Filter capacitor from filtered_node to ground
+    filtered_node ~> filter_capacitor ~> power.lv
+
+    # Tie second switch channel enable low (unused)
+    filter_sw_en2_pulldown = new Resistor
+    filter_sw_en2_pulldown.resistance = 10kohm +/- 5%
+    filter_sw_en2_pulldown.package = "0402"
+    filter_switch.enables[1].line ~> filter_sw_en2_pulldown ~> power.lv
+
+    # Expose unipolar output for diagnostics
+    voltage_output_raw.line ~ filtered_node
+    voltage_output_raw.reference ~ power
+
+    # ---------------------------------------------------------------
+    # Bipolar level-shifting subtractor
+    # Difference amplifier: V_out = V_filtered - V_ref
+    # With V_ref = 2.5V and V_dac = 0-5V: V_out = -2.5V to +2.5V
+    #
+    # Circuit (unity-gain difference amplifier):
+    #   R1 (10k) from V_filtered to op-amp inverting input
+    #   R2 (10k) in feedback from op-amp output to inverting input
+    #   R3 (10k) from V_ref to op-amp non-inverting input
+    #   R4 (10k) from op-amp non-inverting input to ground
+    #
+    #   V_out = (R2/R1) * (V_filtered - V_ref) when R1=R2=R3=R4
+    # ---------------------------------------------------------------
+
+    # Op-amp for subtractor -- uses one section of AD8608 quad
+    subtractor_opamp = new AD8608_Quad
+    """Quad op-amp -- section A used for DAC subtractor"""
+    subtractor_opamp.power ~ power
+
+    # Precision 0.1% resistors for the difference amplifier
+    r_sub_1 = new Resistor
+    """R1: V_filtered to inverting input"""
+    r_sub_1.resistance = 10kohm +/- 0.1%
+    r_sub_1.package = "0402"
+
+    r_sub_2 = new Resistor
+    """R2: feedback from output to inverting input"""
+    r_sub_2.resistance = 10kohm +/- 0.1%
+    r_sub_2.package = "0402"
+
+    r_sub_3 = new Resistor
+    """R3: V_ref to non-inverting input"""
+    r_sub_3.resistance = 10kohm +/- 0.1%
+    r_sub_3.package = "0402"
+
+    r_sub_4 = new Resistor
+    """R4: non-inverting input to ground"""
+    r_sub_4.resistance = 10kohm +/- 0.1%
+    r_sub_4.package = "0402"
+
+    # Wire the difference amplifier
+    # V_filtered -> R1 -> inverting input
+    filtered_node ~> r_sub_1 ~> subtractor_opamp.a_inverting
+
+    # Output -> R2 -> inverting input (feedback)
+    subtractor_opamp.a_output ~> r_sub_2 ~> subtractor_opamp.a_inverting
+
+    # V_ref -> R3 -> non-inverting input
+    dac.vref.hv ~> r_sub_3 ~> subtractor_opamp.a_noninverting
+
+    # Non-inverting input -> R4 -> ground
+    subtractor_opamp.a_noninverting ~> r_sub_4 ~> power.lv
+
+    # Bipolar output
+    voltage_output.line ~ subtractor_opamp.a_output
+    voltage_output.reference ~ power
+
+    # --- Filter bypass reference ---
+    filter_bypass.reference ~ power

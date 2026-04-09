@@ -1,0 +1,103 @@
+#pragma experiment("BRIDGE_CONNECT")
+
+"""
+Reference electrode buffer — unity gain voltage follower.
+
+Provides ultra-high input impedance buffering for the reference electrode
+to prevent current draw that would shift the electrode potential.
+A 10 MOhm input protection resistor limits fault current while
+maintaining negligible voltage error at the op-amp's high impedance input.
+
+Uses one section of the AD8608 quad op-amp (section A for RE buffer,
+section B for guard ring driver).
+"""
+
+import ElectricPower
+import Electrical
+import ElectricSignal
+import Resistor
+import Capacitor
+
+from "lib/ad8608.ato" import AD8608_Quad
+
+
+module REBuffer:
+    """
+    Reference electrode unity-gain buffer with input protection and guard driver.
+
+    Interfaces:
+        power: Supply rails for the buffer op-amp
+        re_input: Raw reference electrode signal (from electrode connector)
+        re_output: Buffered reference electrode signal (to control amplifier)
+        guard_output: Guard ring driver output (buffers virtual ground potential)
+        opamp_quad: AD8608 quad op-amp (sections C-D available for other modules)
+    """
+
+    # --- External interfaces ---
+    power = new ElectricPower
+    """Supply power for the buffer circuit"""
+    power.required = True
+
+    re_input = new ElectricSignal
+    """Raw reference electrode input (from electrode connector)"""
+    re_input.required = True
+
+    re_output = new ElectricSignal
+    """Buffered reference electrode output (to control amplifier)"""
+    re_output.required = True
+
+    guard_output = new ElectricSignal
+    """Guard ring driver output — buffers the virtual ground potential"""
+
+    # --- AD8608 quad op-amp (section A = RE buffer, section B = guard driver) ---
+    opamp_quad = new AD8608_Quad
+    """Quad op-amp — section A for RE buffer, section B for guard driver"""
+
+    opamp_quad.power ~ power
+
+    # --- Input protection resistor ---
+    # 10 MOhm limits fault current to sub-uA levels
+    # while maintaining negligible voltage error with high-Z op-amp input
+    input_protection = new Resistor
+    input_protection.resistance = 10Mohm +/- 5%
+    input_protection.package = "0603"
+
+    re_input.line ~> input_protection ~> opamp_quad.a_noninverting
+
+    # --- Unity gain feedback (section A) ---
+    # P1 fix: Wire output directly to inverting input (voltage follower)
+    opamp_quad.a_output ~ opamp_quad.a_inverting
+
+    # Buffered output
+    re_output.line ~ opamp_quad.a_output
+
+    # --- P2 fix: Guard ring driver (section B) ---
+    # Unity-gain follower buffering the virtual ground potential
+    # for PCB guard ring to reduce leakage currents on high-Z input traces
+    guard_output.line ~ opamp_quad.b_output
+    opamp_quad.b_output ~ opamp_quad.b_inverting
+    opamp_quad.b_noninverting ~ opamp_quad.a_noninverting
+
+    # --- Power bypass capacitors ---
+    # (AD8608_Quad includes its own bypass caps, these are additional local decoupling)
+    bypass_cap_100n = new Capacitor
+    bypass_cap_100n.capacitance = 100nF +/- 20%
+    bypass_cap_100n.package = "0402"
+    power.hv ~> bypass_cap_100n ~> power.lv
+
+    bypass_cap_10u = new Capacitor
+    bypass_cap_10u.capacitance = 10uF +/- 20%
+    bypass_cap_10u.package = "0402"
+    power.hv ~> bypass_cap_10u ~> power.lv
+
+    # --- Input guard capacitor ---
+    # Small cap to shunt RF interference on the high-impedance input
+    input_guard_cap = new Capacitor
+    input_guard_cap.capacitance = 10pF +/- 20%
+    input_guard_cap.package = "0402"
+    opamp_quad.a_noninverting ~> input_guard_cap ~> power.lv
+
+    # --- Reference assignments ---
+    re_input.reference ~ power
+    re_output.reference ~ power
+    guard_output.reference ~ power

@@ -1,4 +1,103 @@
-"""Brand new atopile project!"""
+#pragma experiment("BRIDGE_CONNECT")
+#pragma experiment("FOR_LOOP")
+#pragma experiment("TRAITS")
+
+"""atostat - modular multichannel potentiostat with bipotentiostat capabilities."""
+
+import ElectricPower
+import ElectricSignal
+import ElectricLogic
+import Electrical
+import I2C
+import SPI
+
+from "lib/power_supply.ato" import PowerSupply
+from "lib/channel_module.ato" import PotentiostatChannel
+from "lib/connectivity.ato" import ConnectivityGateway
 
 module App:
-    pass
+    """
+    Top-level atostat application.
+
+    Single-channel potentiostat with power supply and WiFi/USB connectivity.
+    Expandable to multichannel by adding more PotentiostatChannel instances.
+
+    External connections:
+        power_in: 5-12V DC input (barrel jack or USB)
+        ce0/re0/we0: Electrode connectors for channel 0
+        cell_enable0: Cell disconnect control for channel 0
+        mode_select0: Potentiostat/galvanostat mode for channel 0
+        trigger_in: External trigger input (from lab instruments)
+        sync_out: Sync pulse output (to lab instruments)
+    """
+
+    # --- Power supply ---
+    psu = new PowerSupply
+    """Power supply generating 5V, 3.3V, and (future) -5V rails"""
+
+    # External power input (5V USB or 5-12V barrel jack)
+    power_in = new ElectricPower
+    power_in.required = True
+    assert power_in.voltage within 5V to 12V
+    power_in ~ psu.power_in
+
+    # --- Connectivity gateway ---
+    gateway = new ConnectivityGateway
+    """ESP32-S3 gateway with I2C fan-out to 8 channels"""
+
+    gateway.power ~ psu.power_3v3
+
+    # --- Channel 0: First potentiostat channel ---
+    ch0 = new PotentiostatChannel
+    """Potentiostat channel 0"""
+
+    ch0.host_power ~ psu.power_5v
+    ch0.host_i2c ~ gateway.channel_i2c[0]
+
+    # --- Electrode connectors (exposed to the user) ---
+    ce0 = new ElectricSignal
+    """Counter electrode connector for channel 0"""
+    re0 = new ElectricSignal
+    """Reference electrode connector for channel 0"""
+    we0 = new ElectricSignal
+    """Working electrode connector for channel 0"""
+
+    ce0 ~ ch0.ce
+    re0 ~ ch0.re
+    we0 ~ ch0.we
+
+    # --- Cell disconnect control ---
+    cell_enable0 = new ElectricLogic
+    """Cell disconnect switch for channel 0 (high = connected)"""
+    cell_enable0 ~ ch0.cell_enable
+
+    # --- Mode select ---
+    mode_select0 = new ElectricLogic
+    """Potentiostat/galvanostat mode for channel 0 (low = potentiostat)"""
+    mode_select0 ~ ch0.mode_select
+
+    # --- External trigger and sync ---
+    trigger_in = new ElectricLogic
+    """External trigger input from lab instruments"""
+    trigger_in ~ gateway.trigger_in
+
+    sync_out = new ElectricLogic
+    """Sync pulse output to lab instruments"""
+    sync_out ~ gateway.sync_out
+
+    # --- CAN bus (multi-channel synchronization) ---
+    can_h = new Electrical
+    """CAN bus high line"""
+    can_h ~ gateway.can_h
+
+    can_l = new Electrical
+    """CAN bus low line"""
+    can_l ~ gateway.can_l
+
+    # --- Hardware sync bus ---
+    sync_bus = new Electrical
+    """Shared sync line for multi-channel simultaneous triggering"""
+    sync_bus ~ gateway.sync_bus
+
+    # --- Host SPI to channel 0 ---
+    ch0.host_spi ~ gateway.channel_spi

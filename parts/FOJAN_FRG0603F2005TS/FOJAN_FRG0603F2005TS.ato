@@ -1,0 +1,19 @@
+import has_datasheet
+import has_designator_prefix
+import has_part_picked
+import is_atomic_part
+import is_auto_generated
+
+component FOJAN_FRG0603F2005TS_package:
+    # This trait marks this file as auto-generated
+    # If you want to manually change it, remove the trait
+    trait is_auto_generated<system="ato_part", source="easyeda:C3013334", date="2026-04-09T10:46:59.767539+00:00", checksum="b9d5334f62a4ee362e5e2748ba127fb3bc9b89504ac46fc6d4ce2452820e8298">
+
+    trait is_atomic_part<manufacturer="FOJAN", partnumber="FRG0603F2005TS", footprint="R0603.kicad_mod", symbol="FRG0603F2005TS.kicad_sym", model="R0603.STEP">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C3013334", manufacturer="FOJAN", partno="FRG0603F2005TS">
+    trait has_designator_prefix<prefix="U">
+    trait has_datasheet<datasheet="https://wmsc.lcsc.com/wmsc/upload/file/pdf/v2/lcsc/2308241947_FOJAN-FRG0603F2005TS_C3013334.pdf">
+
+    # pins
+    pin 1
+    pin 2

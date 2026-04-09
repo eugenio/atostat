@@ -1,0 +1,85 @@
+#pragma experiment("BRIDGE_CONNECT")
+
+"""
+CAN bus transceiver module for multi-channel synchronization.
+
+Uses TI SN65HVD230 3.3V CAN transceiver for inter-channel
+communication and synchronization. Supports up to 1 Mbps data rate.
+120 ohm termination included for end-of-bus placement.
+"""
+
+import ElectricPower
+import ElectricLogic
+import Electrical
+import Resistor
+import Capacitor
+
+from "parts/Texas_Instruments_SN65HVD230DR/Texas_Instruments_SN65HVD230DR.ato" import SN65HVD230_package
+
+
+module CANBus:
+    """
+    CAN bus transceiver with termination.
+
+    Interfaces:
+        power: 3.3V supply
+        tx: Transmit data from MCU
+        rx: Receive data to MCU
+        can_h: CAN bus high line
+        can_l: CAN bus low line
+    """
+
+    # --- External interfaces ---
+    power = new ElectricPower
+    """3.3V supply for transceiver"""
+    power.required = True
+    assert power.voltage within 3V to 3.6V
+
+    tx = new ElectricLogic
+    """Transmit data input from MCU"""
+
+    rx = new ElectricLogic
+    """Receive data output to MCU"""
+
+    can_h = new Electrical
+    """CAN bus high line"""
+
+    can_l = new Electrical
+    """CAN bus low line"""
+
+    # --- Package instance ---
+    package = new SN65HVD230_package
+
+    # --- Power connections ---
+    power.hv ~ package.VCC
+    power.lv ~ package.GND
+
+    # --- Data connections ---
+    tx.line ~ package.TXD
+    rx.line ~ package.RXD
+
+    # --- Bus connections ---
+    can_h ~ package.CANH
+    can_l ~ package.CANL
+
+    # --- Slope control: RS to GND through 10k (slope limiting mode) ---
+    rs_resistor = new Resistor
+    rs_resistor.resistance = 10kohm +/- 5%
+    rs_resistor.package = "0402"
+    package.RS ~> rs_resistor ~> power.lv
+
+    # --- 120 ohm bus termination ---
+    termination = new Resistor
+    termination.resistance = 120ohm +/- 1%
+    termination.package = "0402"
+    can_h ~> termination ~> can_l
+
+    # --- Bypass capacitor ---
+    bypass = new Capacitor
+    bypass.capacitance = 100nF +/- 20%
+    bypass.package = "0402"
+    power.hv ~> bypass ~> power.lv
+
+    # --- Reference connections ---
+    tx.reference ~ power
+    rx.reference ~ power

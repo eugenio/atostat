@@ -1,0 +1,172 @@
+#pragma experiment("BRIDGE_CONNECT")
+
+"""
+ADS1256 24-bit 30kSPS delta-sigma ADC driver module.
+
+High-speed SPI ADC for fast electrochemical techniques (CV, SWV, DPV).
+Provides 4 differential or 8 single-ended analog input channels.
+PGA with gains 1-64x, programmable data rate 2.5-30000 SPS.
+
+Datasheet: https://www.ti.com/lit/ds/symlink/ads1256.pdf
+"""
+
+import ElectricPower
+import ElectricLogic
+import SPI
+import DifferentialPair
+import Capacitor
+import Resistor
+
+from "parts/Texas_Instruments_ADS1256IDBR/Texas_Instruments_ADS1256IDBR.ato" import ADS1256_package
+
+
+module ADS1256_driver:
+    """
+    ADS1256 24-bit delta-sigma ADC driver.
+
+    30 kSPS max data rate, SPI interface, internal PGA (1-64x).
+    Dual supply: AVDD (5V analog) + DVDD (1.8-3.6V digital).
+
+    Interfaces:
+        power_analog: 5V analog supply (AVDD)
+        power_digital: 3.3V digital supply (DVDD)
+        spi: SPI bus (SCLK, DIN=MOSI, DOUT=MISO, CS active low)
+        drdy: Data ready output (active low, directly from DRDY pin)
+        current_sense: Differential channel 0 (AIN0/AIN1) for TIA
+        voltage_sense: Differential channel 1 (AIN2/AIN3) for cell voltage
+        vref: External voltage reference input (VREFP/VREFN)
+        reset: Active-low reset
+        sync_pdwn: Active-low sync/power-down
+    """
+
+    # --- External interfaces ---
+    power_analog = new ElectricPower
+    """5V analog supply (AVDD). Must be clean, low-noise."""
+    power_analog.required = True
+    assert power_analog.voltage within 4.75V to 5.25V
+
+    power_digital = new ElectricPower
+    """3.3V digital supply (DVDD)."""
+    power_digital.required = True
+    assert power_digital.voltage within 1.8V to 3.6V
+
+    spi = new SPI
+    """SPI bus. Mode 1 (CPOL=0, CPHA=1), max 7.68 MHz SCLK."""
+
+    cs = new ElectricLogic
+    """SPI chip select (active low)."""
+
+    drdy = new ElectricLogic
+    """Data ready (active low). Goes low when new conversion is available."""
+
+    current_sense = new DifferentialPair
+    """Differential channel 0: AIN0(+) / AIN1(-) for current measurement."""
+
+    voltage_sense = new DifferentialPair
+    """Differential channel 1: AIN2(+) / AIN3(-) for cell voltage."""
+
+    vref = new ElectricPower
+    """External voltage reference: VREFP / VREFN."""
+
+    reset = new ElectricLogic
+    """Active-low hardware reset."""
+
+    sync_pdwn = new ElectricLogic
+    """Active-low sync / power-down control."""
+
+    # --- Package instance ---
+    package = new ADS1256_package
+
+    # --- Analog power connections ---
+    power_analog.hv ~ package.AVDD
+    power_analog.lv ~ package.AGND1
+    power_analog.lv ~ package.AGND2
+    power_analog.lv ~ package.AGND3
+
+    # --- Digital power connections ---
+    power_digital.hv ~ package.DVDD
+    power_digital.lv ~ package.DGND
+
+    # Connect analog and digital grounds
+    power_analog.lv ~ power_digital.lv
+
+    # --- SPI connections ---
+    spi.sclk.line ~ package.SCLK
+    spi.mosi.line ~ package.DIN
+    spi.miso.line ~ package.DOUT
+    cs.line ~ package.CS
+
+    # --- DRDY ---
+    drdy.line ~ package.DRDY
+
+    # --- Control pins ---
+    reset.line ~ package.RESET
+    sync_pdwn.line ~ package.SYNC_PDWN
+
+    # Pull-up on RESET (10k to DVDD) -- hold out of reset
+    reset_pullup = new Resistor
+    reset_pullup.resistance = 10kohm +/- 5%
+    reset_pullup.package = "0402"
+    power_digital.hv ~> reset_pullup ~> package.RESET
+
+    # Pull-up on SYNC/PDWN (10k to DVDD) -- hold active
+    sync_pullup = new Resistor
+    sync_pullup.resistance = 10kohm +/- 5%
+    sync_pullup.package = "0402"
+    power_digital.hv ~> sync_pullup ~> package.SYNC_PDWN
+
+    # Pull-up on CS (10k to DVDD) -- default deselected
+    cs_pullup = new Resistor
+    cs_pullup.resistance = 10kohm +/- 5%
+    cs_pullup.package = "0402"
+    power_digital.hv ~> cs_pullup ~> package.CS
+
+    # CLKIN tied to DGND for internal oscillator
+    package.CLKIN ~ power_digital.lv
+
+    # --- Voltage reference ---
+    vref.hv ~ package.VREFP
+    vref.lv ~ package.VREFN
+
+    # --- Input protection resistors (1k 0402) ---
+    prot_ain0 = new Resistor
+    prot_ain0.resistance = 1kohm +/- 1%
+    prot_ain0.package = "0402"
+
+    prot_ain1 = new Resistor
+    prot_ain1.resistance = 1kohm +/- 1%
+    prot_ain1.package = "0402"
+
+    prot_ain2 = new Resistor
+    prot_ain2.resistance = 1kohm +/- 1%
+    prot_ain2.package = "0402"
+
+    prot_ain3 = new Resistor
+    prot_ain3.resistance = 1kohm +/- 1%
+    prot_ain3.package = "0402"
+
+    # --- Channel 0: current sense (AIN0+, AIN1-) ---
+    current_sense.p.line ~> prot_ain0 ~> package.AIN0
+    current_sense.n.line ~> prot_ain1 ~> package.AIN1
+
+    # --- Channel 1: voltage sense (AIN2+, AIN3-) ---
+    voltage_sense.p.line ~> prot_ain2 ~> package.AIN2
+    voltage_sense.n.line ~> prot_ain3 ~> package.AIN3
+
+    # --- Bypass capacitors ---
+    # AVDD: 10uF bulk + 100nF bypass
+    avdd_bulk = new Capacitor
+    avdd_bulk.capacitance = 10uF +/- 20%
+    avdd_bulk.package = "0805"
+    power_analog.hv ~> avdd_bulk ~> power_analog.lv
+
+    avdd_bypass = new Capacitor
+    avdd_bypass.capacitance = 100nF +/- 20%
+    avdd_bypass.package = "0402"
+    power_analog.hv ~> avdd_bypass ~> power_analog.lv
+
+    # DVDD: 100nF bypass
+    dvdd_bypass = new Capacitor
+    dvdd_bypass.capacitance = 100nF +/- 20%
+    dvdd_bypass.package = "0402"
+    power_digital.hv ~> dvdd_bypass ~> power_digital.lv

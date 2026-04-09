@@ -1,0 +1,77 @@
+#pragma experiment("BRIDGE_CONNECT")
+
+"""
+EIS (Electrochemical Impedance Spectroscopy) excitation placeholder.
+
+This module provides the interface and attenuation network for injecting
+a small AC perturbation signal into the potentiostat's V_set summing node
+for impedance measurements.
+
+PLACEHOLDER: A DDS chip (AD9833 or similar) should be added in a future
+revision to generate the AC excitation waveform. For now, only the
+summing/attenuation resistor network and interfaces are defined.
+
+The AC signal is attenuated through a 100kohm resistor before being summed
+into the V_set node, resulting in a small perturbation (typically 5-50 mV
+peak-to-peak at the cell) suitable for EIS measurements.
+"""
+
+import ElectricPower
+import ElectricSignal
+import I2C
+import Resistor
+
+
+module EISExcitation:
+    """
+    EIS AC excitation placeholder with attenuation network.
+
+    The ac_out signal should be summed into the control amplifier's V_set
+    node through the attenuation resistor. The DDS frequency source is
+    a placeholder for future implementation.
+
+    Interfaces:
+        power: Supply for future DDS chip
+        ac_out: Attenuated AC perturbation output (sum into V_set)
+        frequency_control: I2C bus for future DDS chip control
+    """
+
+    # --- External interfaces ---
+    power = new ElectricPower
+    """Supply power for future DDS chip"""
+    power.required = True
+
+    ac_out = new ElectricSignal
+    """Small AC perturbation output -- sum into V_set through attenuation network"""
+    ac_out.required = True
+
+    frequency_control = new I2C
+    """I2C or SPI bus for future DDS chip (AD9833 or similar) -- placeholder"""
+
+    # --- Internal signal: raw DDS output (placeholder) ---
+    signal dds_output
+    """Raw DDS output -- connect to DDS chip when available"""
+
+    # --- Attenuation resistor ---
+    # 100kohm series resistor attenuates the AC signal before summing into V_set.
+    # With a ~1kohm source impedance at the V_set node, the attenuation is
+    # approximately 100:1, turning a 1V DDS output into ~10mV perturbation.
+    r_attenuate = new Resistor
+    """100kohm attenuation resistor for AC excitation signal"""
+    r_attenuate.resistance = 100kohm +/- 1%
+    r_attenuate.package = "0402"
+
+    # DDS output -> attenuation resistor -> ac_out (to be summed at V_set)
+    dds_output ~> r_attenuate ~> ac_out.line
+
+    # --- Reference assignments ---
+    ac_out.reference ~ power
+
+    # --- Future DDS implementation notes ---
+    # TODO (future revision): Add AD9833 or AD9837 DDS chip:
+    #   - SPI interface (remap frequency_control to SPI)
+    #   - 0-12.5 MHz output frequency range
+    #   - Sine/triangle/square waveform selection
+    #   - Connect DDS output to dds_output signal
+    #   - Add output buffer amplifier if needed for drive strength
+    #   - Add anti-aliasing filter on DDS output

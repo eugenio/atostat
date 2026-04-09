@@ -1,0 +1,19 @@
+import has_datasheet
+import has_designator_prefix
+import has_part_picked
+import is_atomic_part
+import is_auto_generated
+
+component YAGEO_RC0805JR_07100ML_package:
+    # This trait marks this file as auto-generated
+    # If you want to manually change it, remove the trait
+    trait is_auto_generated<system="ato_part", source="easyeda:C137480", date="2026-04-09T10:46:59.038355+00:00", checksum="0461e7da20ed7a57c378f30f6ccb331136391d90023fb3ce1a2a604c4cd194dd">
+
+    trait is_atomic_part<manufacturer="YAGEO", partnumber="RC0805JR-07100ML", footprint="R0805.kicad_mod", symbol="RC0805JR-07100ML.kicad_sym", model="R0805_L2.0-W1.3-H0.6.step">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C137480", manufacturer="YAGEO", partno="RC0805JR-07100ML">
+    trait has_designator_prefix<prefix="R">
+    trait has_datasheet<datasheet="https://www.lcsc.com/datasheet/lcsc_datasheet_2304140030_YAGEO-RC0805JR-07100ML_C137480.pdf">
+
+    # pins
+    pin 2
+    pin 1

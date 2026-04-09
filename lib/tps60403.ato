@@ -1,0 +1,82 @@
+#pragma experiment("BRIDGE_CONNECT")
+
+"""
+TPS60403DBVR unregulated charge pump voltage inverter.
+
+Produces -VIN from VIN (e.g., -5V from +5V input).
+SOT-23-5 package, up to 60 mA output current.
+Requires one flying capacitor and one output capacitor (both 1uF typ).
+
+Datasheet: https://www.ti.com/lit/ds/symlink/tps60403.pdf
+"""
+
+import ElectricPower
+import Capacitor
+
+from "parts/Texas_Instruments_TPS60403DBVR/Texas_Instruments_TPS60403DBVR.ato" import TPS60403_package
+
+
+module TPS60403_driver:
+    """
+    TPS60403 charge pump inverter driver.
+
+    Generates -VIN from VIN. For VIN = 5V, VOUT = -5V (relative to GND).
+    The output ElectricPower interface models the negative rail:
+      power_out.hv = GND (0V)
+      power_out.lv = VOUT (-5V)
+    This way power_out.voltage = 0V - (-5V) = 5V (positive quantity),
+    which atopile can handle natively.
+
+    Interfaces:
+        power_in: Positive input supply (e.g. 5V)
+        power_out: Inverted output rail (hv=GND, lv=VOUT i.e. -VIN)
+    """
+
+    # --- External interfaces ---
+    power_in = new ElectricPower
+    """Positive input supply (VIN, e.g. 5V)"""
+    power_in.required = True
+
+    power_out = new ElectricPower
+    """Inverted output: hv=GND, lv=VOUT(-VIN). voltage = |VOUT| as positive value."""
+    power_out.required = True
+
+    # --- Package ---
+    package = new TPS60403_package
+
+    # --- Flying capacitor (CAP+ to VOUT) ---
+    # TPS60403 uses an internal oscillator to charge/discharge the flying cap.
+    # Recommended: 1uF ceramic, X5R or X7R, low ESR.
+    flying_cap = new Capacitor
+    flying_cap.capacitance = 1uF +/- 20%
+    flying_cap.package = "0402"
+
+    # --- Output capacitor (VOUT to GND) ---
+    # Recommended: 1uF ceramic, X5R or X7R.
+    output_cap = new Capacitor
+    output_cap.capacitance = 1uF +/- 20%
+    output_cap.package = "0402"
+
+    # --- Input decoupling capacitor ---
+    input_cap = new Capacitor
+    input_cap.capacitance = 1uF +/- 20%
+    input_cap.package = "0402"
+
+    # --- Package pin connections ---
+    # Pin 1 = VIN, Pin 2 = GND, Pin 3 = VOUT, Pin 4 = NC, Pin 5 = CAP+
+    power_in.hv ~ package.1   # VIN
+    power_in.lv ~ package.2   # GND
+
+    # Flying cap: between CAP+ (pin 5) and VOUT (pin 3)
+    package.5 ~> flying_cap ~> package.3
+
+    # Output model: hv = GND (0V), lv = VOUT (-VIN)
+    # This means power_out.voltage = hv - lv = 0 - (-5V) = 5V (positive)
+    power_out.hv ~ package.2   # GND
+    power_out.lv ~ package.3   # VOUT (negative rail)
+
+    # Output cap: VOUT to GND (power_out.lv to power_out.hv)
+    power_out.hv ~> output_cap ~> power_out.lv
+
+    # Input decoupling: VIN to GND
+    power_in.hv ~> input_cap ~> power_in.lv

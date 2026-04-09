@@ -1,0 +1,19 @@
+import has_datasheet
+import has_designator_prefix
+import has_part_picked
+import is_atomic_part
+import is_auto_generated
+
+component STE_R06B1B271KN0B0S0N0_package:
+    # This trait marks this file as auto-generated
+    # If you want to manually change it, remove the trait
+    trait is_auto_generated<system="ato_part", source="easyeda:C2914698", date="2026-04-09T10:49:24.952511+00:00", checksum="bdbd20a4e082f0056be60bde2c564847135865ba14171f66128223018c58acfd">
+
+    trait is_atomic_part<manufacturer="STE", partnumber="R06B1B271KN0B0S0N0", footprint="CAP-TH_L6.0-W2.5-P5.00-D1.0.kicad_mod", symbol="R06B1B271KN0B0S0N0.kicad_sym", model="CAP-TH_L6.0-W2.5-P5.0.step">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C2914698", manufacturer="STE", partno="R06B1B271KN0B0S0N0">
+    trait has_designator_prefix<prefix="C">
+    trait has_datasheet<datasheet="https://wmsc.lcsc.com/wmsc/upload/file/pdf/v2/lcsc/2111291730_STE-Songtian-Elec-R06B1B271KN0B0S0N0_C2914698.pdf">
+
+    # pins
+    pin 1
+    pin 2

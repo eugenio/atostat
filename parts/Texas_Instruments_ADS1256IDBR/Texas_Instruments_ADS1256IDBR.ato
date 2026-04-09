@@ -1,0 +1,41 @@
+import has_designator_prefix
+import has_part_picked
+import is_atomic_part
+
+component ADS1256_package:
+    """ADS1256IDBR TSSOP-28 24-bit 30kSPS delta-sigma ADC."""
+
+    trait is_atomic_part<manufacturer="Texas Instruments", partnumber="ADS1256IDBR", footprint="TSSOP-28_L9.7-W4.4-P0.65-LS6.4-BL.kicad_mod", symbol="ADS1256IDBR.kicad_sym">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C21017", manufacturer="Texas Instruments", partno="ADS1256IDBR">
+    trait has_designator_prefix<prefix="U">
+
+    # TSSOP-28 pinout (ADS1256IDBR datasheet)
+    # Analog power and ground
+    signal AVDD ~ pin 1       # Analog positive supply (5V)
+    signal AIN0 ~ pin 2       # Analog input 0
+    signal AIN1 ~ pin 3       # Analog input 1
+    signal AIN2 ~ pin 4       # Analog input 2
+    signal AGND1 ~ pin 5      # Analog ground 1
+    signal AGND2 ~ pin 6      # Analog ground 2
+    signal AGND3 ~ pin 7      # Analog ground 3
+    signal AIN3 ~ pin 8       # Analog input 3
+    signal AIN4 ~ pin 9       # Analog input 4
+    signal AIN5 ~ pin 10      # Analog input 5
+    signal AIN6 ~ pin 11      # Analog input 6
+    signal AIN7 ~ pin 12      # Analog input 7
+    signal DRDY ~ pin 13      # Data ready (active low)
+    signal DIN ~ pin 14       # SPI data in (MOSI)
+    signal SCLK ~ pin 15      # SPI clock
+    signal CS ~ pin 16        # SPI chip select (active low)
+    signal CLKIN ~ pin 17     # External clock input (optional)
+    signal SYNC_PDWN ~ pin 18 # Sync/power down (active low)
+    signal RESET ~ pin 19     # Reset (active low)
+    pin 20                    # NC
+    pin 21                    # NC
+    pin 22                    # NC
+    pin 23                    # NC
+    signal VREFP ~ pin 24     # Positive voltage reference
+    signal VREFN ~ pin 25     # Negative voltage reference
+    signal DVDD ~ pin 26      # Digital positive supply (1.8-3.6V)
+    signal DGND ~ pin 27      # Digital ground
+    signal DOUT ~ pin 28      # SPI data out (MISO) / DRDY shared

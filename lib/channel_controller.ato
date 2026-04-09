@@ -1,0 +1,171 @@
+#pragma experiment("BRIDGE_CONNECT")
+#pragma experiment("FOR_LOOP")
+
+"""
+Per-channel RP2040 real-time controller.
+
+Runs on the isolated side of each potentiostat channel, providing
+local real-time control of the electrochemical measurement loop.
+Communicates with the ESP32-S3 gateway via isolated SPI.
+
+Note: Uses a simplified RP2040 placeholder due to atopile trait
+resolution incompatibility with the full RP2040 module in isolated
+power domains. The RP2040 PCB module (crystal, flash, decoupling)
+should be instantiated as a sub-board or added when the trait issue
+is resolved upstream.
+"""
+
+import ElectricPower
+import ElectricLogic
+import I2C
+import SPI
+import Resistor
+import Capacitor
+import has_part_removed
+
+
+module RP2040_placeholder:
+    """
+    Simplified RP2040 placeholder with correct interfaces.
+    In production, replace with the full Raspberry_Pi_RP2040 module
+    once atopile trait resolution supports isolated power domains.
+    """
+    power = new ElectricPower
+    power.required = True
+    assert power.voltage within 3.3V +/- 10%
+
+    spi = new SPI
+    i2c = new I2C
+    gpio = new ElectricLogic[30]
+
+    trait has_part_removed
+
+
+module ChannelController:
+    """
+    Per-channel RP2040 real-time controller on isolated side.
+
+    Interfaces:
+        power: 3.3V from isolated digital supply
+        spi_adc: SPI bus to ADS1256 fast ADC
+        spi_adc_cs: ADS1256 chip select
+        i2c_peripherals: I2C bus to DAC + NAU7802
+        drdy: Data ready from ADS1256
+        gain_select_a[2]: TIA mux A address
+        gain_select_b[2]: TIA mux B address
+        gain_select_bank: TIA A/B bank select
+        cell_enable: Cell disconnect switch control
+        mode_select: Potentiostat/galvanostat mode
+        host_spi: SPI bus to gateway (through isolator)
+        host_spi_cs: SPI chip select for host communication
+        status_led: Per-channel status LED
+    """
+
+    # --- External interfaces ---
+    power = new ElectricPower
+    """3.3V isolated digital supply"""
+    power.required = True
+
+    spi_adc = new SPI
+    """SPI bus to ADS1256 (SCLK, MOSI, MISO)"""
+
+    spi_adc_cs = new ElectricLogic
+    """ADS1256 chip select"""
+
+    i2c_peripherals = new I2C
+    """I2C bus to DAC (AD5693R) and slow ADC (NAU7802)"""
+
+    drdy = new ElectricLogic
+    """ADS1256 data ready input (active low)"""
+
+    gain_select_a = new ElectricLogic[2]
+    """TIA mux A address bits"""
+
+    gain_select_b = new ElectricLogic[2]
+    """TIA mux B address bits"""
+
+    gain_select_bank = new ElectricLogic
+    """TIA A/B bank select"""
+
+    cell_enable = new ElectricLogic
+    """Cell disconnect switch control"""
+
+    mode_select = new ElectricLogic
+    """Potentiostat/galvanostat mode select"""
+
+    host_spi = new SPI
+    """SPI bus to host gateway (through SPI isolator)"""
+
+    host_spi_cs = new ElectricLogic
+    """Host SPI chip select"""
+
+    status_led = new ElectricLogic
+    """Per-channel status LED output"""
+
+    # --- RP2040 placeholder instance ---
+    mcu = new RP2040_placeholder
+    mcu.power ~ power
+
+    # --- SPI0: to ADS1256 fast ADC (gpio[18-20]) ---
+    spi_adc.sclk.line ~ mcu.spi.sclk.line
+    spi_adc.mosi.line ~ mcu.spi.mosi.line
+    spi_adc.miso.line ~ mcu.spi.miso.line
+    spi_adc_cs.line ~ mcu.gpio[17].line
+
+    # --- I2C0: to DAC + NAU7802 (gpio[2-3]) ---
+    i2c_peripherals.sda.line ~ mcu.i2c.sda.line
+    i2c_peripherals.scl.line ~ mcu.i2c.scl.line
+
+    # --- DRDY (gpio[16]) ---
+    drdy.line ~ mcu.gpio[16].line
+
+    # --- Gain select (gpio[6-10]) ---
+    gain_select_a[0].line ~ mcu.gpio[6].line
+    gain_select_a[1].line ~ mcu.gpio[7].line
+    gain_select_b[0].line ~ mcu.gpio[8].line
+    gain_select_b[1].line ~ mcu.gpio[9].line
+    gain_select_bank.line ~ mcu.gpio[10].line
+
+    # --- Cell/mode (gpio[11-12]) ---
+    cell_enable.line ~ mcu.gpio[11].line
+    mode_select.line ~ mcu.gpio[12].line
+
+    # --- SPI1: to host gateway (gpio[13-15,22]) ---
+    host_spi.sclk.line ~ mcu.gpio[13].line
+    host_spi.mosi.line ~ mcu.gpio[14].line
+    host_spi.miso.line ~ mcu.gpio[15].line
+    host_spi_cs.line ~ mcu.gpio[22].line
+
+    # --- Status LED (gpio[25]) ---
+    led_resistor = new Resistor
+    led_resistor.resistance = 1kohm +/- 5%
+    led_resistor.package = "0402"
+
+    status_led.line ~ mcu.gpio[25].line
+    status_led.line ~> led_resistor ~> power.lv
+
+    # --- Reference assignments ---
+    spi_adc.sclk.reference ~ power
+    spi_adc.mosi.reference ~ power
+    spi_adc.miso.reference ~ power
+    spi_adc_cs.reference ~ power
+    drdy.reference ~ power
+    cell_enable.reference ~ power
+    mode_select.reference ~ power
+    status_led.reference ~ power
+    host_spi.sclk.reference ~ power
+    host_spi.mosi.reference ~ power
+    host_spi.miso.reference ~ power
+    host_spi_cs.reference ~ power
+
+    for gs in gain_select_a:
+        gs.reference ~ power
+    for gs in gain_select_b:
+        gs.reference ~ power
+    gain_select_bank.reference ~ power
+
+    # --- Power bypass ---
+    bypass_100n = new Capacitor
+    bypass_100n.capacitance = 100nF +/- 20%
+    bypass_100n.package = "0402"
+    power.hv ~> bypass_100n ~> power.lv

@@ -1,0 +1,19 @@
+import has_datasheet
+import has_designator_prefix
+import has_part_picked
+import is_atomic_part
+import is_auto_generated
+
+component UNI_ROYAL_0402WGJ010KTCE_package:
+    # This trait marks this file as auto-generated
+    # If you want to manually change it, remove the trait
+    trait is_auto_generated<system="ato_part", source="easyeda:C474056", date="2026-04-09T12:31:20.424975+00:00", checksum="3eeb6500f61be325e889b5f72c2c14fb36ade57a5f67542347bc230b5ac67a15">
+
+    trait is_atomic_part<manufacturer="UNI-ROYAL", partnumber="0402WGJ010KTCE", footprint="R0402.kicad_mod", symbol="0402WGJ010KTCE.kicad_sym", model="R0402_L1.0-W0.5-H0.4.step">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C474056", manufacturer="UNI-ROYAL", partno="0402WGJ010KTCE">
+    trait has_designator_prefix<prefix="R">
+    trait has_datasheet<datasheet="https://wmsc.lcsc.com/wmsc/upload/file/pdf/v2/lcsc/2205312130_UNI-ROYAL-Uniroyal-Elec-0402WGJ010KTCE_C474056.pdf">
+
+    # pins
+    pin 2
+    pin 1

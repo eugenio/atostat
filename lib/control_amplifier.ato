@@ -1,0 +1,174 @@
+#pragma experiment("BRIDGE_CONNECT")
+
+"""
+Control amplifier module for potentiostat.
+
+Drives the counter electrode (CE) to maintain V_WE - V_RE = V_set.
+The control amplifier compares the reference electrode feedback (re_input)
+against the set voltage (v_set) and drives the counter electrode (ce_output)
+to enforce the desired potential at the working electrode.
+
+Uses one section of the AD8608 quad op-amp (section A).
+"""
+
+import ElectricPower
+import Electrical
+import ElectricSignal
+import ElectricLogic
+import Resistor
+import Capacitor
+
+from "lib/ad8608.ato" import AD8608_Quad
+from "atopile/ti-ts5a22362/ti-ts5a22362.ato" import Texas_Instruments_TS5A22362DGSR
+
+
+module ControlAmplifier:
+    """
+    Potentiostat control amplifier with stability compensation.
+
+    Interfaces:
+        power: Supply rails for the op-amp (typically +/- 5V or single 5V)
+        v_set: Set voltage from DAC — the desired WE-RE potential
+        re_input: Reference electrode feedback (buffered)
+        ce_output: Counter electrode drive output (after snubber)
+        opamp_quad: AD8608 quad op-amp (sections B-D available for other modules)
+    """
+
+    # --- External interfaces ---
+    power = new ElectricPower
+    """Supply power for the control amplifier circuit"""
+    power.required = True
+
+    v_set = new ElectricSignal
+    """Set voltage input from DAC — target potential for WE vs RE"""
+    v_set.required = True
+
+    re_input = new ElectricSignal
+    """Reference electrode feedback signal (buffered by re_buffer)"""
+    re_input.required = True
+
+    ce_output = new ElectricSignal
+    """Counter electrode drive output (after snubber resistor)"""
+    ce_output.required = True
+
+    comp_select = new ElectricLogic[2]
+    """Compensation network select: 00=fast(10pF), 01=medium(100nF), 10=slow(1nF)"""
+
+    # --- AD8608 quad op-amp (using section A for control amp) ---
+    opamp_quad = new AD8608_Quad
+    """Quad op-amp — section A used here, B-D available for other modules"""
+
+    opamp_quad.power ~ power
+
+    # --- Signal routing ---
+    # V_set goes to non-inverting input
+    v_set.line ~ opamp_quad.a_noninverting
+
+    # RE feedback goes to inverting input (error amplifier topology)
+    re_input.line ~ opamp_quad.a_inverting
+
+    # --- Switchable RC compensation networks ---
+    # 3 presets selected by 2x TS5A22362 (4 switches total, 3 used):
+    #   Network 0 (fast):   10pF + 100ohm   -> ~160 MHz (small cells, low impedance)
+    #   Network 1 (medium): 100nF + 8.06kohm -> ~200 Hz  (standard cells)
+    #   Network 2 (slow):   1nF + 10kohm     -> ~16 kHz  (high impedance cells)
+
+    comp_sw0 = new Texas_Instruments_TS5A22362DGSR
+    """SPDT switch pair for comp networks 0 and 1"""
+    comp_sw0.power ~ power
+
+    comp_sw1 = new Texas_Instruments_TS5A22362DGSR
+    """SPDT switch for comp network 2"""
+    comp_sw1.power ~ power
+
+    # Network 0 (fast): 10pF + 100ohm
+    comp_r0 = new Resistor
+    comp_r0.resistance = 100ohm +/- 1%
+    comp_r0.package = "0402"
+    comp_c0 = new Capacitor
+    comp_c0.capacitance = 10pF +/- 5%
+    comp_c0.package = "0402"
+
+    # Network 1 (medium): 100nF + 8.06kohm
+    comp_r1 = new Resistor
+    comp_r1.resistance = 8.06kohm +/- 1%
+    comp_r1.package = "0402"
+    comp_c1 = new Capacitor
+    comp_c1.capacitance = 100nF +/- 10%
+    comp_c1.package = "0402"
+
+    # Network 2 (slow): 1nF + 10kohm
+    comp_r2 = new Resistor
+    comp_r2.resistance = 10kohm +/- 1%
+    comp_r2.package = "0402"
+    comp_c2 = new Capacitor
+    comp_c2.capacitance = 1nF +/- 10%
+    comp_c2.package = "0402"
+
+    # Wire each RC network in parallel (R || C) across inverting-to-output
+    # Each network enabled by its switch (NO path)
+    # Switch 0, channel 0: fast comp
+    opamp_quad.a_inverting ~ comp_sw0.switches_no[0].unnamed[0]
+    comp_sw0.switches_no[0].unnamed[1] ~> comp_r0 ~> opamp_quad.a_output
+    comp_sw0.switches_no[0].unnamed[1] ~> comp_c0 ~> opamp_quad.a_output
+
+    # Switch 0, channel 1: medium comp
+    opamp_quad.a_inverting ~ comp_sw0.switches_no[1].unnamed[0]
+    comp_sw0.switches_no[1].unnamed[1] ~> comp_r1 ~> opamp_quad.a_output
+    comp_sw0.switches_no[1].unnamed[1] ~> comp_c1 ~> opamp_quad.a_output
+
+    # Switch 1, channel 0: slow comp
+    opamp_quad.a_inverting ~ comp_sw1.switches_no[0].unnamed[0]
+    comp_sw1.switches_no[0].unnamed[1] ~> comp_r2 ~> opamp_quad.a_output
+    comp_sw1.switches_no[0].unnamed[1] ~> comp_c2 ~> opamp_quad.a_output
+
+    # Control: comp_select[0] -> sw0 enables, comp_select[1] -> sw1 enable
+    comp_select[0].line ~ comp_sw0.enables[0].line
+    comp_select[0].line ~ comp_sw0.enables[1].line
+    comp_select[1].line ~ comp_sw1.enables[0].line
+    comp_select[0].reference ~ power
+    comp_select[1].reference ~ power
+
+    # --- Output snubber network ---
+    # Series R+C snubber on the output to damp ringing into capacitive loads
+    snubber_resistor = new Resistor
+    snubber_resistor.resistance = 10ohm +/- 5%
+    snubber_resistor.package = "0402"
+
+    snubber_capacitor = new Capacitor
+    snubber_capacitor.capacitance = 1nF +/- 10%
+    snubber_capacitor.package = "0402"
+
+    # Snubber: output -> R -> node -> C -> ground
+    # The snubber_node is between R and C — this is where ce_output taps
+    signal snubber_node
+    opamp_quad.a_output ~> snubber_resistor ~> snubber_node
+    snubber_node ~> snubber_capacitor ~> power.lv
+
+    # P1 fix: CE output taps AFTER the snubber resistor (between R and C)
+    ce_output.line ~ snubber_node
+
+    # Switchable compensation implemented above with 3 presets via TS5A22362.
+
+    # --- P3 fix: TVS diode on CE output for open-cell protection ---
+    # TODO: Add bidirectional TVS diode (SMBJ5.0A) on ce_output
+    # Clamps CE voltage to +/-5V when cell is disconnected.
+    # Placeholder — no TVS diode package available yet.
+    # When available, connect: ce_output.line ~> tvs ~> power.lv
+
+    # --- Power bypass capacitors ---
+    # (AD8608_Quad includes its own bypass caps, these are additional local decoupling)
+    bypass_cap_100n = new Capacitor
+    bypass_cap_100n.capacitance = 100nF +/- 20%
+    bypass_cap_100n.package = "0402"
+    power.hv ~> bypass_cap_100n ~> power.lv
+
+    bypass_cap_10u = new Capacitor
+    bypass_cap_10u.capacitance = 10uF +/- 20%
+    bypass_cap_10u.package = "0402"
+    power.hv ~> bypass_cap_10u ~> power.lv
+
+    # --- Reference assignments ---
+    v_set.reference ~ power
+    re_input.reference ~ power
+    ce_output.reference ~ power

@@ -1,0 +1,19 @@
+import has_datasheet
+import has_designator_prefix
+import has_part_picked
+import is_atomic_part
+import is_auto_generated
+
+component TyoHM_RMC04028_87K1_N_package:
+    # This trait marks this file as auto-generated
+    # If you want to manually change it, remove the trait
+    trait is_auto_generated<system="ato_part", source="easyeda:C269407", date="2026-04-09T10:55:09.593856+00:00", checksum="3e761e9aae38d7f3aa4a0259639873c7fbd4966e4cd06b476ad72c82f50e9d5a">
+
+    trait is_atomic_part<manufacturer="TyoHM", partnumber="RMC04028.87K1%N", footprint="R0402.kicad_mod", symbol="RMC04028.87K1%N.kicad_sym", model="R0402_L1.0-W0.5-H0.4.step">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C269407", manufacturer="TyoHM", partno="RMC04028.87K1%N">
+    trait has_designator_prefix<prefix="R">
+    trait has_datasheet<datasheet="https://www.lcsc.com/datasheet/lcsc_datasheet_2304140030_TyoHM-RMC04028-87K1-N_C269407.pdf">
+
+    # pins
+    pin 2
+    pin 1

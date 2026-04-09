@@ -1,0 +1,162 @@
+(footprint "STE_R06B1B271KN0B0S0N0:CAP-TH_L6.0-W2.5-P5.00-D1.0"
+	(version 20241229)
+	(generator "faebryk_convert")
+	(generator_version "v5")
+	(layer "F.Cu")
+	(tedit "5DC5F6A4")
+	(uuid "9372db16-2215-44be-942f-6857f4dc08f2")
+	(property "Reference" "REF**"
+		(at 0 -4)
+		(layer "F.SilkS")
+		(uuid "9857a5dd-5afc-4f42-97c7-f183a997b182")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "CAP-TH_L6.0-W2.5-P5.00-D1.0"
+		(at 0 4)
+		(layer "F.Fab")
+		(uuid "8986345f-b38a-409b-a01d-6d5c3bfe93c1")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr through_hole)
+	(fp_circle
+		(center -3 1.25)
+		(end -2.97 1.25)
+		(stroke
+			(width 0.06)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(locked no)
+		(uuid "610340f4-2b82-421c-acc3-8daa7ede56ce")
+	)
+	(fp_circle
+		(center 2.5 0)
+		(end 2.62 0)
+		(stroke
+			(width 0.25)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(locked no)
+		(uuid "b507af59-5127-4b65-a879-af0b225fdc45")
+	)
+	(fp_circle
+		(center -2.5 0)
+		(end -2.38 0)
+		(stroke
+			(width 0.25)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(locked no)
+		(uuid "800cdb18-7ce5-4851-a1e1-ccbe1370fd42")
+	)
+	(fp_line
+		(start 3 -0.89)
+		(end 3 -1.25)
+		(stroke
+			(width 0.25)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(layers "F.SilkS")
+		(locked no)
+		(uuid "71983fbd-5f6b-4a8d-b751-994df2235c2d")
+	)
+	(fp_line
+		(start 3 -1.25)
+		(end -3 -1.25)
+		(stroke
+			(width 0.25)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(layers "F.SilkS")
+		(locked no)
+		(uuid "2214c71a-b5e4-4a92-8813-07da6781351c")
+	)
+	(fp_line
+		(start -3 -1.25)
+		(end -3 -0.89)
+		(stroke
+			(width 0.25)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(layers "F.SilkS")
+		(locked no)
+		(uuid "e97462be-e6fa-49ac-b805-ad5b23a44fbf")
+	)
+	(fp_line
+		(start 3 0.89)
+		(end 3 1.27)
+		(stroke
+			(width 0.25)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(layers "F.SilkS")
+		(locked no)
+		(uuid "69058da9-1462-4aa7-947f-d0cc39b7a323")
+	)
+	(fp_line
+		(start 3 1.27)
+		(end -3 1.27)
+		(stroke
+			(width 0.25)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(layers "F.SilkS")
+		(locked no)
+		(uuid "0af4856b-835a-4414-9954-57673cd2ad98")
+	)
+	(fp_line
+		(start -3 1.27)
+		(end -3 0.89)
+		(stroke
+			(width 0.25)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(layers "F.SilkS")
+		(locked no)
+		(uuid "c61b4d36-efc0-45b4-9b4e-5545ff1030e0")
+	)
+	(pad "2" thru_hole circle
+		(at 2.5 0 0)
+		(size 1.6 1.6)
+		(drill 0.999998)
+		(layers "*.Cu" "*.Mask")
+		(uuid "24ba61ae-d222-4a5b-99e4-a8bdc5e74e1c")
+	)
+	(pad "1" thru_hole circle
+		(at -2.5 0 0)
+		(size 1.6 1.6)
+		(drill 0.999998)
+		(layers "*.Cu" "*.Mask")
+		(uuid "6c2535f8-4f88-430f-9f78-a8ea10271458")
+	)
+	(model "${KIPRJMOD}/../../parts/STE_R06B1B271KN0B0S0N0/CAP-TH_L6.0-W2.5-P5.0.step"
+		(offset
+			(xyz 0 -0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
+	(embedded_fonts no)
+)

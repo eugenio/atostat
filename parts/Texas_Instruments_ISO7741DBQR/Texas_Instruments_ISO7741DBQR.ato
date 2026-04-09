@@ -1,0 +1,31 @@
+import has_designator_prefix
+import has_part_picked
+import is_atomic_part
+
+component ISO7741_package:
+    """TI ISO7741DBQR quad digital isolator, SSOP-16, 3:1 channel config."""
+
+    trait is_atomic_part<manufacturer="Texas Instruments", partnumber="ISO7741DBQR", footprint="SSOP-16_L5.3-W3.4-P0.65-LS5.2.kicad_mod", symbol="ISO7741DBQR.kicad_sym">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C179463", manufacturer="Texas Instruments", partno="ISO7741DBQR">
+    trait has_designator_prefix<prefix="U">
+
+    # SSOP-16 pinout (ISO7741 datasheet)
+    # Side 1 (host)
+    signal VCC1 ~ pin 1       # Host-side supply
+    signal INA ~ pin 2        # Channel A input (host->iso)
+    signal INB ~ pin 3        # Channel B input (host->iso)
+    signal INC ~ pin 4        # Channel C input (host->iso)
+    signal OUD ~ pin 5        # Channel D output (iso->host)
+    pin 6                     # NC
+    signal EN1 ~ pin 7        # Enable side 1
+    signal GND1 ~ pin 8       # Host-side ground
+
+    # Side 2 (isolated)
+    signal OUTA ~ pin 9       # Channel A output (host->iso)
+    signal OUTB ~ pin 10      # Channel B output (host->iso)
+    signal OUTC ~ pin 11      # Channel C output (host->iso)
+    signal IND ~ pin 12       # Channel D input (iso->host)
+    pin 13                    # NC
+    signal GND2 ~ pin 14      # Isolated-side ground
+    signal VCC2 ~ pin 15      # Isolated-side supply
+    signal EN2 ~ pin 16       # Enable side 2

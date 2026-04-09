@@ -1,0 +1,111 @@
+#pragma experiment("BRIDGE_CONNECT")
+#pragma experiment("FOR_LOOP")
+
+"""
+TI ISO7741 quad digital isolator driver.
+
+3 channels A->B (host->isolated), 1 channel B->A (isolated->host).
+100 Mbps capable, 5 kV isolation, 2.25-5.5V per side.
+"""
+
+import ElectricPower
+import ElectricLogic
+import Capacitor
+import Resistor
+
+from "parts/Texas_Instruments_ISO7741DBQR/Texas_Instruments_ISO7741DBQR.ato" import ISO7741_package
+
+
+module ISO7741_driver:
+    """
+    ISO7741 quad unidirectional digital isolator.
+
+    Interfaces:
+        power_host: Host-side supply (VCC1/GND1)
+        power_isolated: Isolated-side supply (VCC2/GND2)
+        host_in[3]: Host-to-isolated inputs (INA, INB, INC)
+        isolated_out[3]: Host-to-isolated outputs (OUTA, OUTB, OUTC)
+        isolated_in: Isolated-to-host input (IND)
+        host_out: Isolated-to-host output (OUD)
+    """
+
+    # --- External interfaces ---
+    power_host = new ElectricPower
+    """Host-side supply (2.25-5.5V)"""
+    power_host.required = True
+    assert power_host.voltage within 2.25V to 5.5V
+
+    power_isolated = new ElectricPower
+    """Isolated-side supply (2.25-5.5V)"""
+    power_isolated.required = True
+    assert power_isolated.voltage within 2.25V to 5.5V
+
+    # A->B direction (host -> isolated): 3 channels
+    host_in = new ElectricLogic[3]
+    """Host-side inputs (channels A, B, C)"""
+
+    isolated_out = new ElectricLogic[3]
+    """Isolated-side outputs (channels A, B, C)"""
+
+    # B->A direction (isolated -> host): 1 channel
+    isolated_in = new ElectricLogic
+    """Isolated-side input (channel D)"""
+
+    host_out = new ElectricLogic
+    """Host-side output (channel D)"""
+
+    # --- Package instance ---
+    package = new ISO7741_package
+
+    # --- Power connections ---
+    power_host.hv ~ package.VCC1
+    power_host.lv ~ package.GND1
+    power_isolated.hv ~ package.VCC2
+    power_isolated.lv ~ package.GND2
+
+    # --- Enable pins: pull up to respective VCC via 10k ---
+    en1_pullup = new Resistor
+    en1_pullup.resistance = 10kohm +/- 5%
+    en1_pullup.package = "0402"
+    power_host.hv ~> en1_pullup ~> package.EN1
+
+    en2_pullup = new Resistor
+    en2_pullup.resistance = 10kohm +/- 5%
+    en2_pullup.package = "0402"
+    power_isolated.hv ~> en2_pullup ~> package.EN2
+
+    # --- Channel A: host -> isolated ---
+    host_in[0].line ~ package.INA
+    isolated_out[0].line ~ package.OUTA
+
+    # --- Channel B: host -> isolated ---
+    host_in[1].line ~ package.INB
+    isolated_out[1].line ~ package.OUTB
+
+    # --- Channel C: host -> isolated ---
+    host_in[2].line ~ package.INC
+    isolated_out[2].line ~ package.OUTC
+
+    # --- Channel D: isolated -> host ---
+    isolated_in.line ~ package.IND
+    host_out.line ~ package.OUD
+
+    # --- Bypass capacitors ---
+    bypass_host = new Capacitor
+    bypass_host.capacitance = 100nF +/- 20%
+    bypass_host.package = "0402"
+    power_host.hv ~> bypass_host ~> power_host.lv
+
+    bypass_iso = new Capacitor
+    bypass_iso.capacitance = 100nF +/- 20%
+    bypass_iso.package = "0402"
+    power_isolated.hv ~> bypass_iso ~> power_isolated.lv
+
+    # --- Reference connections ---
+    for h in host_in:
+        h.reference ~ power_host
+    host_out.reference ~ power_host
+
+    for i in isolated_out:
+        i.reference ~ power_isolated
+    isolated_in.reference ~ power_isolated

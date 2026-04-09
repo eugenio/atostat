@@ -1,0 +1,31 @@
+import has_datasheet
+import has_designator_prefix
+import has_part_picked
+import is_atomic_part
+import is_auto_generated
+
+component Analog_Devices_AD8608ARUZ_package:
+    # This trait marks this file as auto-generated
+    # If you want to manually change it, remove the trait
+    trait is_auto_generated<system="ato_part", source="easyeda:C578776", date="2026-04-09T12:25:54.557040+00:00", checksum="e647eb266df737344f780cecfcd0165d2debc84a594437040d4fde2d07f98398">
+
+    trait is_atomic_part<manufacturer="Analog Devices", partnumber="AD8608ARUZ", footprint="TSSOP-14_L5.0-W4.4-P0.65-LS6.4-BL.kicad_mod", symbol="AD8608ARUZ.kicad_sym", model="TSSOP-14_L5.0-W4.4-H1.0-LS6.4-P0.65.step">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C578776", manufacturer="Analog Devices", partno="AD8608ARUZ">
+    trait has_designator_prefix<prefix="U">
+    trait has_datasheet<datasheet="https://wmsc.lcsc.com/wmsc/upload/file/pdf/v2/lcsc/2205191630_Analog-Devices-AD8608ARUZ_C578776.pdf">
+
+    # pins
+    signal INAneg ~ pin 2
+    signal INApos ~ pin 3
+    signal INBneg ~ pin 6
+    signal INBpos ~ pin 5
+    signal INCneg ~ pin 13
+    signal INCpos ~ pin 12
+    signal INDneg ~ pin 9
+    signal INDpos ~ pin 10
+    signal OUTA ~ pin 1
+    signal OUTB ~ pin 7
+    signal OUTC ~ pin 14
+    signal OUTD ~ pin 8
+    signal Vneg ~ pin 11
+    signal Vpos ~ pin 4

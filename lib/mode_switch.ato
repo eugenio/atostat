@@ -1,0 +1,84 @@
+#pragma experiment("BRIDGE_CONNECT")
+
+"""
+Mode switch for selecting between potentiostat and galvanostat feedback.
+
+In potentiostat mode (default, mode_select LOW), the reference electrode
+buffer output feeds the control amplifier feedback -- the control loop
+maintains V_WE - V_RE = V_set.
+
+In galvanostat mode (mode_select HIGH), the TIA output feeds the control
+amplifier feedback -- the control loop maintains I_WE = V_set / R_gain,
+i.e., constant current through the working electrode.
+
+Uses one channel of a TS5A22362 dual SPDT analog switch.
+"""
+
+import ElectricPower
+import ElectricSignal
+import ElectricLogic
+import Resistor
+
+from "atopile/ti-ts5a22362/ti-ts5a22362.ato" import Texas_Instruments_TS5A22362DGSR
+
+
+module ModeSwitch:
+    """
+    SPDT switch selecting between potentiostat and galvanostat feedback paths.
+
+    Interfaces:
+        power: Supply for the analog switch
+        re_feedback: From RE buffer output (potentiostat mode)
+        tia_feedback: From TIA output (galvanostat mode)
+        feedback_output: To control amplifier re_input
+        mode_select: LOW = potentiostat, HIGH = galvanostat
+    """
+
+    # --- External interfaces ---
+    power = new ElectricPower
+    """Supply power for the analog switch"""
+    power.required = True
+
+    re_feedback = new ElectricSignal
+    """Reference electrode buffer output -- potentiostat mode feedback"""
+    re_feedback.required = True
+
+    tia_feedback = new ElectricSignal
+    """TIA output -- galvanostat mode feedback"""
+    tia_feedback.required = True
+
+    feedback_output = new ElectricSignal
+    """Selected feedback signal to control amplifier re_input"""
+    feedback_output.required = True
+
+    mode_select = new ElectricLogic
+    """LOW = potentiostat (RE feedback), HIGH = galvanostat (TIA feedback)"""
+
+    # --- Analog switch ---
+    sw = new Texas_Instruments_TS5A22362DGSR
+    """Dual SPDT switch -- channel 1 used for mode selection"""
+
+    sw.power ~ power
+
+    # Mode select drives switch channel 1
+    sw.enables[0] ~ mode_select
+
+    # NC path (LOW = potentiostat): RE feedback -> COM -> feedback_output
+    sw.switches_nc[0].unnamed[0] ~ re_feedback.line
+    sw.switches_nc[0].unnamed[1] ~ feedback_output.line
+
+    # NO path (HIGH = galvanostat): TIA feedback -> COM -> feedback_output
+    sw.switches_no[0].unnamed[0] ~ tia_feedback.line
+    sw.switches_no[0].unnamed[1] ~ feedback_output.line
+
+    # Tie second switch channel enable low (unused)
+    sw_en2_pulldown = new Resistor
+    sw_en2_pulldown.resistance = 10kohm +/- 5%
+    sw_en2_pulldown.package = "0402"
+    sw.enables[1].line ~> sw_en2_pulldown ~> power.lv
+
+    # --- Reference assignments ---
+    re_feedback.reference ~ power
+    tia_feedback.reference ~ power
+    feedback_output.reference ~ power
+    mode_select.reference ~ power

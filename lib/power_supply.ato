@@ -1,0 +1,111 @@
+#pragma experiment("BRIDGE_CONNECT")
+#pragma experiment("FOR_LOOP")
+
+"""Power supply module for the atostat potentiostat.
+Generates 5V, 3.3V, and -5V rails from a single 5-12V input."""
+
+import ElectricPower
+import ElectricLogic
+import Capacitor
+
+from "atopile/ti-tps63020/ti-tps63020.ato" import TPS63020_driver
+from "atopile/st-ldk220/st-ldk220.ato" import LDK220M_R
+from "lib/tps60403.ato" import TPS60403_driver
+
+module PowerSupply:
+    """Generates multiple voltage rails from a single 5-12V input.
+    - power_5v: 5V analog rail (via TPS63020 buck-boost)
+    - power_3v3: 3.3V digital rail (via LDK220 LDO from 5V rail)
+    - power_neg: -5V rail (via TPS60403 charge pump inverter from 5V rail)
+    - power_good: Voltage supervisor output (placeholder for TPS3839)
+    """
+
+    # --- External interfaces ---
+    power_in = new ElectricPower
+    power_5v = new ElectricPower
+    power_3v3 = new ElectricPower
+    power_neg = new ElectricPower
+    power_good = new ElectricLogic
+    """Power-good output. TODO: Add TPS3839 voltage supervisor to monitor
+    all rails and assert power_good when all are within spec.
+    For now this interface is exposed but undriven."""
+
+    # --- Input voltage assertion ---
+    assert power_in.voltage within 5V to 12V
+
+    # --- 5V rail: TPS63020 buck-boost converter ---
+    buck_boost_5v = new TPS63020_driver
+    assert buck_boost_5v.power_out.voltage within 5V +/- 3%
+
+    power_in ~ buck_boost_5v.power_in
+    buck_boost_5v.power_out ~ power_5v
+
+    # Bulk decoupling on 5V rail
+    bulk_cap_5v = new Capacitor
+    bulk_cap_5v.capacitance = 10uF +/- 20%
+    bulk_cap_5v.package = "0805"
+
+    bypass_cap_5v = new Capacitor
+    bypass_cap_5v.capacitance = 100nF +/- 20%
+    bypass_cap_5v.package = "0402"
+
+    power_5v.hv ~> bulk_cap_5v ~> power_5v.lv
+    power_5v.hv ~> bypass_cap_5v ~> power_5v.lv
+
+    # --- 3.3V rail: LDK220 LDO from 5V rail ---
+    ldo_3v3 = new LDK220M_R
+    assert ldo_3v3.power_out.voltage within 3.3V +/- 3%
+
+    power_5v ~ ldo_3v3.power_in
+    ldo_3v3.power_out ~ power_3v3
+
+    # Bulk decoupling on 3.3V rail
+    bulk_cap_3v3 = new Capacitor
+    bulk_cap_3v3.capacitance = 10uF +/- 20%
+    bulk_cap_3v3.package = "0805"
+
+    bypass_cap_3v3 = new Capacitor
+    bypass_cap_3v3.capacitance = 100nF +/- 20%
+    bypass_cap_3v3.package = "0402"
+
+    power_3v3.hv ~> bulk_cap_3v3 ~> power_3v3.lv
+    power_3v3.hv ~> bypass_cap_3v3 ~> power_3v3.lv
+
+    # --- Negative rail: TPS60403 charge pump inverter (-5V from 5V) ---
+    # The TPS60403 inverts the input: VIN=5V -> VOUT=-5V relative to GND.
+    # In the TPS60403_driver, power_out is modeled with hv=GND, lv=VOUT(-5V),
+    # so power_out.voltage is a positive ~5V value (|VOUT|).
+    charge_pump_neg = new TPS60403_driver
+
+    power_5v ~ charge_pump_neg.power_in
+    charge_pump_neg.power_out ~ power_neg
+
+    # Note on negative voltage assertion:
+    # atopile models voltage as hv - lv (always positive for ElectricPower).
+    # The TPS60403_driver models the negative rail as hv=GND, lv=VOUT(-5V),
+    # so power_neg.voltage = |VOUT| = ~5V. We assert the magnitude here.
+    # The actual potential at power_neg.lv is -5V relative to system GND.
+    assert power_neg.voltage within 4.5V to 5.5V
+
+    # Additional decoupling on negative rail
+    bulk_cap_neg = new Capacitor
+    bulk_cap_neg.capacitance = 10uF +/- 20%
+    bulk_cap_neg.package = "0805"
+
+    bypass_cap_neg = new Capacitor
+    bypass_cap_neg.capacitance = 100nF +/- 20%
+    bypass_cap_neg.package = "0402"
+
+    power_neg.hv ~> bulk_cap_neg ~> power_neg.lv
+    power_neg.hv ~> bypass_cap_neg ~> power_neg.lv
+
+    # --- Output voltage assertions ---
+    assert power_5v.voltage within 5V +/- 3%
+    assert power_3v3.voltage within 3.3V +/- 3%
+
+    # --- Power-good monitoring (P3 placeholder) ---
+    # TODO: Add TPS3839 voltage supervisor to monitor 5V, 3.3V, and -5V rails.
+    # The TPS3839 has a fixed threshold and open-drain output.
+    # Connect power_good.line to TPS3839 RESET_B output with pull-up to 3.3V.
+    # For now, power_good is an undriven interface placeholder.
+    power_good.reference ~ power_3v3

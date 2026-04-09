@@ -1,0 +1,14 @@
+wing: atostat
+rooms:
+- name: parts
+  description: Files from parts/
+- name: documentation
+  description: Files from docs/
+- name: lib
+  description: Files from lib/
+- name: layouts
+  description: Files from layouts/
+- name: research
+  description: Files from research/
+- name: general
+  description: Files that don't fit other rooms

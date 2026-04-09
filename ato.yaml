@@ -1,4 +1,4 @@
-requires-atopile: "0.15.3"
+requires-atopile: 0.15.3
 
 paths:
   src: ./
@@ -11,7 +11,7 @@ builds:
 # This metadata is only required for publishing
 # Uncomment it and fill out the fields to publish your package
 # package:
-#   identifier: # fill me!/my_first_ato_project
+#   identifier: # fill me!/atostat
 #   repository: # fill me!
 #   version: "0.1.0"  # recommended first version
 #   authors:
@@ -20,3 +20,64 @@ builds:
 #   summary: # fill me!
 #   license: MIT license
 #   homepage: # fill me!
+dependencies:
+- type: registry
+  identifier: atopile/adi-ad5693r
+  release: 0.2.3
+- type: registry
+  identifier: atopile/ti-ads1115
+  release: 0.2.0
+- type: registry
+  identifier: atopile/nuvoton-nau7802
+  release: 0.4.0
+- type: registry
+  identifier: atopile/microchip-mcp3421
+  release: 0.2.0
+- type: registry
+  identifier: atopile/microchip-mcp4728
+  release: 0.2.0
+- type: registry
+  identifier: atopile/ti-dac7578
+  release: 0.3.0
+- type: registry
+  identifier: atopile/ti-ts5a22362
+  release: 0.2.1
+- type: registry
+  identifier: atopile/ti-cd74hc4067sm
+  release: 0.1.1
+- type: registry
+  identifier: atopile/ti-ina228
+  release: 0.2.1
+- type: registry
+  identifier: atopile/ti-ina3221
+  release: 0.2.0
+- type: registry
+  identifier: atopile/ti-ina185a1
+  release: 0.1.0
+- type: registry
+  identifier: atopile/ti-tca9548a
+  release: 0.2.0
+- type: registry
+  identifier: atopile/ti-iso1640x
+  release: 0.3.0
+- type: registry
+  identifier: atopile/ti-tps63020
+  release: 0.4.0
+- type: registry
+  identifier: atopile/st-ldk220
+  release: 0.3.0
+- type: registry
+  identifier: atopile/espressif-esp32-s3
+  release: 0.3.0
+- type: registry
+  identifier: atopile/raspberry-rp2040
+  release: 0.2.5
+- type: registry
+  identifier: ruben-iteng/analog-devices-max14778
+  release: 0.1.2
+- type: registry
+  identifier: ruben-iteng/connectors
+  release: 0.2.3
+- type: registry
+  identifier: ruben-iteng/dcdc-converters
+  release: 0.2.2

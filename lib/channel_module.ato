@@ -1,0 +1,268 @@
+#pragma experiment("BRIDGE_CONNECT")
+#pragma experiment("FOR_LOOP")
+#pragma experiment("TRAITS")
+
+"""
+Complete single potentiostat channel module.
+
+Integrates all analog front-end submodules (control amplifier, RE buffer,
+switched-gain TIA, ADC, DAC) with galvanic isolation. Each channel is
+electrically isolated from the host side for safety and to eliminate
+ground loops between the electrochemical cell and digital logic.
+
+Features:
+  - Cell disconnect switch (TS5A22362) for safe power-up/idle/power-down
+  - Galvanostat mode via ModeSwitch (RE vs TIA feedback selection)
+  - Direct I2C to DAC/ADC (no per-channel TCA9548A needed — addresses differ)
+  - Gain control signals exposed for external GPIO expander routing
+"""
+
+import ElectricPower
+import ElectricSignal
+import ElectricLogic
+import I2C
+import SPI
+import Capacitor
+
+from "lib/control_amplifier.ato" import ControlAmplifier
+from "lib/re_buffer.ato" import REBuffer
+from "lib/switched_gain_tia.ato" import SwitchedGainTIA
+from "lib/adc_interface.ato" import ADCInterface
+from "lib/dac_waveform.ato" import DACWaveform
+from "lib/galvanic_isolator.ato" import GalvanicIsolator
+from "lib/mode_switch.ato" import ModeSwitch
+from "lib/channel_controller.ato" import ChannelController
+from "lib/spi_isolator.ato" import SPIIsolator
+from "atopile/ti-ts5a22362/ti-ts5a22362.ato" import Texas_Instruments_TS5A22362DGSR
+
+
+module PotentiostatChannel:
+    """
+    Single potentiostat channel with galvanic isolation.
+
+    Interfaces:
+        host_power: Main power bus input (non-isolated side)
+        host_i2c: Main I2C bus input (non-isolated side)
+        ce: Counter electrode connector
+        re: Reference electrode connector
+        we: Working electrode connector
+        cell_enable: Logic high enables cell connection (disconnect switch)
+        mode_select: Logic high selects galvanostat mode (TIA feedback)
+        gain_select_a: 2-bit mux A address for TIA gain
+        gain_select_b: 2-bit mux B address for TIA gain
+        gain_select_bank: A/B bank select for TIA gain mux
+    """
+
+    # --- External interfaces ---
+    host_power = new ElectricPower
+    """Main power bus from system (non-isolated side)"""
+    host_power.required = True
+
+    host_i2c = new I2C
+    """Main I2C bus from system controller (non-isolated side, fallback)"""
+
+    host_spi = new SPI
+    """High-speed SPI from gateway to channel RP2040 (through SPI isolator)"""
+
+    ce = new ElectricSignal
+    """Counter electrode connection"""
+    ce.required = True
+
+    re = new ElectricSignal
+    """Reference electrode connection"""
+    re.required = True
+
+    we = new ElectricSignal
+    """Working electrode connection"""
+    we.required = True
+
+    cell_enable = new ElectricLogic
+    """Cell disconnect switch control (high = cell connected, low = cell disconnected)"""
+
+    mode_select = new ElectricLogic
+    """Potentiostat/galvanostat mode select (low = potentiostat, high = galvanostat)"""
+
+    # Gain control signals — route through isolated GPIO (ISO7741 + PCA9535)
+    # Note: TIA agent is changing gain_select from [4] to separate a/b/bank signals.
+    # These should be driven by a PCA9535 I2C GPIO expander on the isolated I2C bus.
+    gain_select_a = new ElectricLogic[2]
+    """Mux A address bits for TIA gain range selection"""
+
+    gain_select_b = new ElectricLogic[2]
+    """Mux B address bits for TIA gain range selection"""
+
+    gain_select_bank = new ElectricLogic
+    """A/B bank select for TIA gain mux"""
+
+    # --- Internal isolated power rail ---
+    isolated_power = new ElectricPower
+    """Isolated power rail for all analog submodules"""
+
+    isolated_i2c = new I2C
+    """Isolated I2C bus for DAC/ADC communication"""
+
+    # --- Galvanic isolation ---
+    isolator = new GalvanicIsolator
+    """Galvanic isolator separating host from analog front-end"""
+
+    # Host side connections
+    isolator.host_power ~ host_power
+    isolator.host_i2c ~ host_i2c
+
+    # Isolated side connections
+    isolator.isolated_power ~ isolated_power
+    isolator.isolated_i2c ~ isolated_i2c
+
+    # --- Per-channel RP2040 real-time controller ---
+    controller = new ChannelController
+    """Local RP2040 managing real-time measurement loop on isolated side"""
+    controller.power ~ isolator.isolated_power_digital
+
+    # --- SPI isolator for host communication ---
+    spi_iso = new SPIIsolator
+    """Isolated SPI for gateway <-> channel RP2040"""
+    spi_iso.host_power ~ host_power
+    spi_iso.isolated_power ~ isolator.isolated_power_digital
+    spi_iso.isolated_spi ~ controller.host_spi
+    spi_iso.isolated_cs ~ controller.host_spi_cs
+    spi_iso.host_spi ~ host_spi
+
+    # --- DAC waveform generator ---
+    # DAC I2C address: 0x0C — no conflict with ADC (0x2A), no mux needed
+    dac = new DACWaveform
+    """DAC for generating set voltage waveforms"""
+
+    dac.power ~ isolated_power
+    dac.i2c ~ isolated_i2c
+
+    # --- ADC interface ---
+    # ADC I2C address: 0x2A — no conflict with DAC (0x0C), no mux needed
+    adc = new ADCInterface
+    """ADC for digitizing current and voltage measurements"""
+
+    adc.power_analog ~ isolator.isolated_power_raw
+    adc.power_digital ~ isolator.isolated_power_clean
+    adc.i2c ~ isolated_i2c
+    adc.spi ~ controller.spi_adc
+    adc.spi_cs ~ controller.spi_adc_cs
+    adc.drdy ~ controller.drdy
+
+    # Controller I2C connects to isolated bus for DAC + slow ADC
+    controller.i2c_peripherals ~ isolated_i2c
+
+    # --- Control amplifier ---
+    ctrl_amp = new ControlAmplifier
+    """Control amplifier driving the counter electrode"""
+
+    ctrl_amp.power ~ isolated_power
+
+    # DAC output -> control amplifier set voltage
+    dac.voltage_output.line ~ ctrl_amp.v_set.line
+
+    # --- Reference electrode buffer ---
+    re_buf = new REBuffer
+    """High-impedance buffer for the reference electrode"""
+
+    re_buf.power ~ isolated_power
+
+    # RE electrode -> buffer input
+    re.line ~ re_buf.re_input.line
+
+    # --- Mode switch (potentiostat / galvanostat) ---
+    mode_switch = new ModeSwitch
+    """Selects RE buffer (potentiostat) or TIA (galvanostat) feedback to control amp"""
+
+    mode_switch.power ~ isolated_power
+
+    # Buffered RE -> mode switch RE feedback input
+    mode_switch.re_feedback.line ~ re_buf.re_output.line
+
+    # --- Switched-gain transimpedance amplifier ---
+    tia = new SwitchedGainTIA
+    """Switched-gain TIA measuring current at working electrode"""
+
+    tia.power ~ isolated_power
+
+    # TIA non-inverting input to isolated ground
+    tia.ground_ref ~ isolated_power.lv
+
+    # TIA current output -> mode switch TIA feedback input
+    mode_switch.tia_feedback.line ~ tia.current_output.line
+
+    # Mode switch output -> control amplifier RE input (feedback path)
+    mode_switch.feedback_output.line ~ ctrl_amp.re_input.line
+
+    # Mode select control (from controller and external)
+    controller.mode_select.line ~ mode_switch.mode_select.line
+    mode_select.line ~ mode_switch.mode_select.line
+    mode_select.reference ~ isolated_power
+
+    # --- Cell disconnect switch (TS5A22362 dual SPDT) ---
+    cell_switch = new Texas_Instruments_TS5A22362DGSR
+    """Dual SPDT analog switch for cell disconnect (CE + WE paths)"""
+
+    cell_switch.power ~ isolated_power
+
+    # Both switches controlled by cell_enable (from controller and external)
+    controller.cell_enable.line ~ cell_switch.enables[0].line
+    controller.cell_enable.line ~ cell_switch.enables[1].line
+    cell_enable.line ~ cell_switch.enables[0].line
+    cell_enable.line ~ cell_switch.enables[1].line
+    cell_enable.reference ~ isolated_power
+
+    # Switch 1 (NO): CE path
+    # When enabled (cell on): ctrl_amp.ce_output -> NO1 -> COM1 -> CE electrode
+    ctrl_amp.ce_output.line ~ cell_switch.switches_no[0].unnamed[0]
+    cell_switch.switches_no[0].unnamed[1] ~ ce.line
+
+    # Switch 2 (NO): WE path
+    # When enabled (cell on): WE electrode -> COM2 -> NO2 -> TIA input
+    we.line ~ cell_switch.switches_no[1].unnamed[1]
+    cell_switch.switches_no[1].unnamed[0] ~ tia.we_input.line
+
+    # --- ADC signal routing ---
+    # Channel 1: TIA output -> ADC current sense (single-ended to differential)
+    tia.current_output.line ~ adc.current_sense.p.line
+    isolated_power.lv ~ adc.current_sense.n.line
+
+    # Channel 2: Voltage measurement = V_WE - V_RE (actual applied cell potential)
+    # P = WE potential (TIA virtual ground / summing junction)
+    # N = buffered RE potential (re_buf output)
+    tia.we_input.line ~ adc.voltage_sense.p.line
+    re_buf.re_output.line ~ adc.voltage_sense.n.line
+
+    # --- Gain control routing through RP2040 controller ---
+    controller.gain_select_a[0] ~ tia.gain_select_a[0]
+    controller.gain_select_a[1] ~ tia.gain_select_a[1]
+    controller.gain_select_b[0] ~ tia.gain_select_b[0]
+    controller.gain_select_b[1] ~ tia.gain_select_b[1]
+    controller.gain_select_bank ~ tia.gain_select_bank
+
+    # External gain control passthrough (for direct host override)
+    gain_select_a[0] ~ tia.gain_select_a[0]
+    gain_select_a[1] ~ tia.gain_select_a[1]
+    gain_select_b[0] ~ tia.gain_select_b[0]
+    gain_select_b[1] ~ tia.gain_select_b[1]
+    gain_select_bank ~ tia.gain_select_bank
+
+    # Set references
+    for gs in gain_select_a:
+        gs.reference ~ isolated_power
+    for gs in gain_select_b:
+        gs.reference ~ isolated_power
+    gain_select_bank.reference ~ isolated_power
+
+    # --- Isolated power bypass capacitors ---
+    iso_bypass_100n = new Capacitor
+    iso_bypass_100n.capacitance = 100nF +/- 20%
+    iso_bypass_100n.package = "0402"
+    isolated_power.hv ~> iso_bypass_100n ~> isolated_power.lv
+
+    iso_bypass_10u = new Capacitor
+    iso_bypass_10u.capacitance = 10uF +/- 20%
+    iso_bypass_10u.package = "0805"
+    isolated_power.hv ~> iso_bypass_10u ~> isolated_power.lv
+
+    # Note: electrode signal references are set by their respective submodules
+    # (control_amplifier sets ce_output.reference, re_buffer sets re_input.reference,
+    # tia sets we_input.reference) -- all tied to isolated_power through power connections

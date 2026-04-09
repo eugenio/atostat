@@ -1,0 +1,84 @@
+#pragma experiment("BRIDGE_CONNECT")
+#pragma experiment("FOR_LOOP")
+
+"""
+AD8608 quad precision CMOS rail-to-rail op-amp.
+
+1 pA bias current, low noise, TSSOP-14 package.
+Used for control amplifier, RE buffer, and TIA in the potentiostat.
+"""
+
+import ElectricPower
+import Electrical
+import Capacitor
+
+from "parts/Analog_Devices_AD8608ARUZ/Analog_Devices_AD8608ARUZ.ato" import Analog_Devices_AD8608ARUZ_package
+
+
+module AD8608_Quad:
+    """
+    Quad op-amp module exposing four sections with shared power.
+
+    Each section provides inverting, noninverting, and output as
+    bare Electrical interfaces. Power bypass caps (100nF + 10uF)
+    are included on the supply pins.
+    """
+
+    # --- Package instance ---
+    package = new Analog_Devices_AD8608ARUZ_package
+
+    # --- Power interface ---
+    power = new ElectricPower
+    """Shared supply for all four op-amp sections (2.7V to 6.0V)"""
+    power.required = True
+    assert power.voltage within 2.7V to 6.0V
+
+    package.Vpos ~ power.hv
+    package.Vneg ~ power.lv
+
+    # --- Section A ---
+    a_inverting = new Electrical
+    a_noninverting = new Electrical
+    a_output = new Electrical
+
+    package.INAneg ~ a_inverting
+    package.INApos ~ a_noninverting
+    package.OUTA ~ a_output
+
+    # --- Section B ---
+    b_inverting = new Electrical
+    b_noninverting = new Electrical
+    b_output = new Electrical
+
+    package.INBneg ~ b_inverting
+    package.INBpos ~ b_noninverting
+    package.OUTB ~ b_output
+
+    # --- Section C ---
+    c_inverting = new Electrical
+    c_noninverting = new Electrical
+    c_output = new Electrical
+
+    package.INCneg ~ c_inverting
+    package.INCpos ~ c_noninverting
+    package.OUTC ~ c_output
+
+    # --- Section D ---
+    d_inverting = new Electrical
+    d_noninverting = new Electrical
+    d_output = new Electrical
+
+    package.INDneg ~ d_inverting
+    package.INDpos ~ d_noninverting
+    package.OUTD ~ d_output
+
+    # --- Bypass capacitors on power ---
+    bypass_100n = new Capacitor
+    bypass_100n.capacitance = 100nF +/- 20%
+    bypass_100n.package = "0402"
+    power.hv ~> bypass_100n ~> power.lv
+
+    bypass_10u = new Capacitor
+    bypass_10u.capacitance = 10uF +/- 20%
+    bypass_10u.package = "0805"
+    power.hv ~> bypass_10u ~> power.lv

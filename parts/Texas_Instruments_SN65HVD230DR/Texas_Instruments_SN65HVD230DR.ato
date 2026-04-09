@@ -1,0 +1,20 @@
+import has_designator_prefix
+import has_part_picked
+import is_atomic_part
+
+component SN65HVD230_package:
+    """TI SN65HVD230DR 3.3V CAN transceiver, SOIC-8."""
+
+    trait is_atomic_part<manufacturer="Texas Instruments", partnumber="SN65HVD230DR", footprint="SOIC-8_L4.9-W3.9-P1.27-LS6.0-BL.kicad_mod", symbol="SN65HVD230DR.kicad_sym">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C12084", manufacturer="Texas Instruments", partno="SN65HVD230DR">
+    trait has_designator_prefix<prefix="U">
+
+    # SOIC-8 pinout
+    signal TXD ~ pin 1        # Transmit data input
+    signal GND ~ pin 2        # Ground
+    signal VCC ~ pin 3        # Supply (3.3V)
+    signal RXD ~ pin 4        # Receive data output
+    signal VREF ~ pin 5       # Reference voltage output
+    signal CANL ~ pin 6       # CAN bus low
+    signal CANH ~ pin 7       # CAN bus high
+    signal RS ~ pin 8         # Slope control / standby

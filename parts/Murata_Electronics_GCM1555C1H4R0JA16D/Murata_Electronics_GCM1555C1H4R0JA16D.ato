@@ -1,0 +1,19 @@
+import has_datasheet
+import has_designator_prefix
+import has_part_picked
+import is_atomic_part
+import is_auto_generated
+
+component Murata_Electronics_GCM1555C1H4R0JA16D_package:
+    # This trait marks this file as auto-generated
+    # If you want to manually change it, remove the trait
+    trait is_auto_generated<system="ato_part", source="easyeda:C2941929", date="2026-04-09T10:46:55.207343+00:00", checksum="019e2fe03209c05a055f1445328d1304831f838d76335ce078601b01c48acaa1">
+
+    trait is_atomic_part<manufacturer="Murata Electronics", partnumber="GCM1555C1H4R0JA16D", footprint="C0402.kicad_mod", symbol="GCM1555C1H4R0JA16D.kicad_sym", model="C0402_L1.0-W0.5-H0.5.step">
+    trait has_part_picked::by_supplier<supplier_id="lcsc", supplier_partno="C2941929", manufacturer="Murata Electronics", partno="GCM1555C1H4R0JA16D">
+    trait has_designator_prefix<prefix="U">
+    trait has_datasheet<datasheet="https://wmsc.lcsc.com/wmsc/upload/file/pdf/v2/lcsc/2201121900_Murata-Electronics-GCM1555C1H4R0JA16D_C2941929.pdf">
+
+    # pins
+    pin 1
+    pin 2

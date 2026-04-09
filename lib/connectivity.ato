@@ -1,0 +1,190 @@
+#pragma experiment("BRIDGE_CONNECT")
+#pragma experiment("FOR_LOOP")
+
+"""
+Central connectivity and gateway module for the atostat potentiostat.
+
+Provides WiFi, USB, and I2C coordination for up to 8 potentiostat channels
+using an ESP32-S3 MCU and TCA9548A I2C multiplexer. The ESP32-S3 serves as
+the system brain, communicating with all channels over a shared I2C bus
+fanned out through the multiplexer.
+
+Includes external trigger input and sync output for lab instrument
+synchronization (e.g., function generators, oscilloscopes, other potentiostats).
+"""
+
+import ElectricPower
+import ElectricLogic
+import ElectricSignal
+import Electrical
+import I2C
+import SPI
+import USB2_0
+import Resistor
+import Capacitor
+
+from "atopile/espressif-esp32-s3/espressif-esp32-s3.ato" import Espressif_ESP32_S3
+from "atopile/ti-tca9548a/ti-tca9548a.ato" import TI_TCA9548A
+from "lib/can_bus.ato" import CANBus
+
+
+module ConnectivityGateway:
+    """
+    Central gateway with ESP32-S3 MCU and I2C fan-out to 8 channels.
+
+    Interfaces:
+        power: 3.3V system power input
+        channel_i2c: Array of 8 I2C buses, one per potentiostat channel
+        usb: USB 2.0 interface from ESP32-S3
+        status_led: Status indication output (active high)
+        trigger_in: External trigger input for experiment synchronization
+        sync_out: Sync pulse output for lab instrument coordination
+    """
+
+    # --- External interfaces ---
+    power = new ElectricPower
+    """3.3V system power supply"""
+    power.required = True
+    assert power.voltage within 3V to 3.6V
+
+    # --- WiFi power filtering (Task 5) ---
+    # ESP32-S3 WiFi TX bursts draw up to 500 mA peak, causing rail dips.
+    # Ferrite bead + 100uF bulk cap provide local energy reservoir.
+    mcu_power = new ElectricPower
+    """Filtered 3.3V supply for ESP32-S3 MCU"""
+
+    wifi_ferrite = new Resistor
+    """Placeholder for ferrite bead between main 3.3V and MCU supply.
+    In production use a real ferrite bead (~600 ohm @ 100 MHz, 0402)."""
+    wifi_ferrite.resistance = 0.1ohm +/- 50%
+    wifi_ferrite.package = "0402"
+
+    wifi_bulk_cap = new Capacitor
+    """100uF bulk capacitor for WiFi TX burst current demand"""
+    wifi_bulk_cap.capacitance = 100uF +/- 20%
+    wifi_bulk_cap.package = "1206"
+
+    wifi_bypass_cap = new Capacitor
+    """100nF high-frequency bypass near MCU power pins"""
+    wifi_bypass_cap.capacitance = 100nF +/- 20%
+    wifi_bypass_cap.package = "0402"
+
+    # Filter path: power.hv -> ferrite -> mcu_power.hv
+    power.hv ~> wifi_ferrite ~> mcu_power.hv
+    power.lv ~ mcu_power.lv
+
+    # Local decoupling on MCU side of ferrite
+    mcu_power.hv ~> wifi_bulk_cap ~> mcu_power.lv
+    mcu_power.hv ~> wifi_bypass_cap ~> mcu_power.lv
+
+    channel_i2c = new I2C[8]
+    """I2C buses fanning out to individual potentiostat channels"""
+
+    usb = new USB2_0
+    """USB 2.0 interface for host communication"""
+
+    status_led = new ElectricLogic
+    """Status LED output (active high drives LED)"""
+
+    trigger_in = new ElectricLogic
+    """External trigger input for experiment synchronization (active high)"""
+
+    sync_out = new ElectricLogic
+    """Sync pulse output for lab instrument coordination"""
+
+    # --- ESP32-S3 MCU ---
+    mcu = new Espressif_ESP32_S3
+    """ESP32-S3 MCU providing WiFi, USB, and I2C master"""
+
+    mcu.power ~ mcu_power
+
+    # USB data lines
+    usb.usb_if.d.p ~ mcu.usb.usb_if.d.p
+    usb.usb_if.d.n ~ mcu.usb.usb_if.d.n
+
+    # --- I2C multiplexer ---
+    i2c_mux = new TI_TCA9548A
+    """TCA9548A I2C mux fanning out MCU I2C to 8 channel buses"""
+
+    i2c_mux.power ~ mcu_power
+
+    # MCU I2C master -> mux upstream
+    i2c_mux.i2c ~ mcu.i2c
+
+    # Mux downstream -> channel I2C buses
+    i2c_mux.i2cs[0] ~ channel_i2c[0]
+    i2c_mux.i2cs[1] ~ channel_i2c[1]
+    i2c_mux.i2cs[2] ~ channel_i2c[2]
+    i2c_mux.i2cs[3] ~ channel_i2c[3]
+    i2c_mux.i2cs[4] ~ channel_i2c[4]
+    i2c_mux.i2cs[5] ~ channel_i2c[5]
+    i2c_mux.i2cs[6] ~ channel_i2c[6]
+    i2c_mux.i2cs[7] ~ channel_i2c[7]
+
+    # --- Status LED with current-limiting resistor ---
+    led_resistor = new Resistor
+    """Current-limiting resistor for status LED (~2mA at 3.3V)"""
+    led_resistor.resistance = 1kohm +/- 5%
+    led_resistor.package = "0402"
+
+    led_signal = new ElectricSignal
+    """Internal signal node between resistor and LED pad"""
+
+    # Status LED is driven from a GPIO (IO15)
+    status_led ~ mcu.io[15]
+    status_led.reference ~ mcu_power
+
+    # LED drive path: GPIO -> resistor -> LED anode (accent pad)
+    # The LED component should be connected externally to led_signal
+    status_led.line ~> led_resistor ~> led_signal.line
+    led_signal.reference ~ mcu_power
+
+    # --- External trigger input (IO16) ---
+    # Direct GPIO connection for external trigger signal
+    trigger_in ~ mcu.io[16]
+    trigger_in.reference ~ mcu_power
+
+    # --- Sync output (IO17) with 100 ohm series impedance matching ---
+    sync_out_resistor = new Resistor
+    """100 ohm series resistor for sync output impedance matching"""
+    sync_out_resistor.resistance = 100ohm +/- 5%
+    sync_out_resistor.package = "0402"
+
+    sync_out.reference ~ mcu_power
+    mcu.io[17].line ~> sync_out_resistor ~> sync_out.line
+
+    # --- CAN bus for multi-channel synchronization ---
+    can = new CANBus
+    """CAN transceiver for inter-channel sync (1 Mbps)"""
+    can.power ~ mcu_power
+    can.tx ~ mcu.io[18]
+    can.rx ~ mcu.io[19]
+
+    can_h = new Electrical
+    """CAN bus high line (exposed for external connection)"""
+    can_l = new Electrical
+    """CAN bus low line (exposed for external connection)"""
+    can_h ~ can.can_h
+    can_l ~ can.can_l
+
+    # --- Hardware sync bus for multi-channel simultaneous triggering ---
+    sync_bus = new Electrical
+    """Shared sync line between all channels for simultaneous triggering"""
+
+    sync_bus_resistor = new Resistor
+    """100 ohm series resistor for sync bus"""
+    sync_bus_resistor.resistance = 100ohm +/- 5%
+    sync_bus_resistor.package = "0402"
+
+    mcu.io[20].line ~> sync_bus_resistor ~> sync_bus
+
+    # --- Host SPI bus for channel communication (replaces I2C bottleneck) ---
+    channel_spi = new SPI
+    """SPI bus for high-speed communication with channel RP2040 controllers"""
+    channel_spi ~ mcu.spi
+
+    # --- Additional power bypass for I2C mux ---
+    mux_bypass = new Capacitor
+    mux_bypass.capacitance = 100nF +/- 20%
+    mux_bypass.package = "0402"
+    mcu_power.hv ~> mux_bypass ~> mcu_power.lv

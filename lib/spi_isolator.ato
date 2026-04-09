@@ -1,0 +1,99 @@
+#pragma experiment("BRIDGE_CONNECT")
+
+"""
+SPI isolation module using ISO7741-pattern quad digital isolator.
+
+Provides galvanically isolated SPI bus for crossing the isolation barrier
+between host controller and isolated analog front-end.
+3 SPI signals + CS through 4-channel isolator: SCLK, MOSI, CS (host->iso), MISO (iso->host).
+DRDY requires a 5th channel -- routed through a separate isolator.
+"""
+
+import ElectricPower
+import ElectricLogic
+import SPI
+import Capacitor
+
+from "lib/galvanic_isolator.ato" import ISO7741_placeholder
+
+
+module SPIIsolator:
+    """
+    Isolated SPI bus using ISO7741 quad digital isolator.
+
+    3 channels host->isolated: SCLK, MOSI, CS
+    1 channel isolated->host: MISO
+    DRDY is routed separately (needs additional isolator channel).
+
+    Interfaces:
+        host_power: Host-side supply (3.3V)
+        isolated_power: Isolated-side supply (3.3V)
+        host_spi: Host-side SPI port (SCLK, MOSI, MISO)
+        isolated_spi: Isolated-side SPI port (SCLK, MOSI, MISO)
+        host_cs: Host-side chip select (ElectricLogic)
+        isolated_cs: Isolated-side chip select (ElectricLogic)
+    """
+
+    # --- External interfaces ---
+    host_power = new ElectricPower
+    """Host-side power supply (3.3V)"""
+    host_power.required = True
+
+    isolated_power = new ElectricPower
+    """Isolated-side power supply (3.3V)"""
+    isolated_power.required = True
+
+    host_spi = new SPI
+    """Host-side SPI bus (SCLK, MOSI, MISO only -- CS is separate)"""
+
+    isolated_spi = new SPI
+    """Isolated-side SPI bus"""
+
+    host_cs = new ElectricLogic
+    """Host-side chip select input"""
+
+    isolated_cs = new ElectricLogic
+    """Isolated-side chip select output"""
+
+    # --- ISO7741 instance ---
+    # 3x A->B (host->isolated): SCLK, MOSI, CS
+    # 1x B->A (isolated->host): MISO
+    spi_iso = new ISO7741_placeholder
+
+    # --- Power connections ---
+    host_power ~ spi_iso.power_a
+    isolated_power ~ spi_iso.power_b
+
+    # --- Host->Isolated (A->B): SCLK, MOSI, CS ---
+    # Channel A0: SCLK
+    host_spi.sclk ~ spi_iso.inputs_a[0]
+    isolated_spi.sclk ~ spi_iso.outputs_b[0]
+
+    # Channel A1: MOSI
+    host_spi.mosi ~ spi_iso.inputs_a[1]
+    isolated_spi.mosi ~ spi_iso.outputs_b[1]
+
+    # Channel A2: CS (separate from SPI interface)
+    host_cs ~ spi_iso.inputs_a[2]
+    isolated_cs ~ spi_iso.outputs_b[2]
+
+    # --- Isolated->Host (B->A): MISO ---
+    isolated_spi.miso ~ spi_iso.input_b
+    host_spi.miso ~ spi_iso.output_a
+
+    # --- DRDY path ---
+    # DRDY uses a SEPARATE isolator channel. Since the ISO7741's single B->A
+    # channel is used for MISO, DRDY must go through the GPIO isolator
+    # in galvanic_isolator.ato or a second ISO7741.
+    # TODO: Add second ISO7741 for DRDY + spare channels
+
+    # --- Reference connections ---
+    host_spi.sclk.reference ~ host_power
+    host_spi.mosi.reference ~ host_power
+    host_spi.miso.reference ~ host_power
+    host_cs.reference ~ host_power
+
+    isolated_spi.sclk.reference ~ isolated_power
+    isolated_spi.mosi.reference ~ isolated_power
+    isolated_spi.miso.reference ~ isolated_power
+    isolated_cs.reference ~ isolated_power

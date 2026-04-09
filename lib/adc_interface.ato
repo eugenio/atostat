@@ -1,0 +1,126 @@
+#pragma experiment("BRIDGE_CONNECT")
+
+"""
+Dual-ADC interface for potentiostat current and voltage measurement.
+
+Two ADC paths for different electrochemical techniques:
+  - ADS1256 (24-bit, 30 kSPS SPI): fast measurements (CV, SWV, DPV)
+  - NAU7802 (24-bit, 320 SPS I2C): slow precision (OCP, chronoamperometry)
+
+Both ADCs share the same analog inputs through protection resistors.
+"""
+
+import ElectricPower
+import ElectricLogic
+import I2C
+import SPI
+import Electrical
+import DifferentialPair
+import Resistor
+
+from "atopile/nuvoton-nau7802/nuvoton-nau7802.ato" import Nuvoton_NAU7802_Dual
+from "lib/ads1256.ato" import ADS1256_driver
+
+
+module ADCInterface:
+    """
+    Dual-ADC sensing interface for potentiostat.
+
+    Fast path: ADS1256 (SPI, 30 kSPS) for CV, SWV, DPV
+    Slow path: NAU7802 (I2C, 320 SPS) for OCP, chronoamperometry
+
+    Interfaces:
+        power_analog: 5V analog supply for ADS1256 AVDD
+        power_digital: 3.3V digital supply for both ADCs
+        spi: SPI bus for ADS1256
+        i2c: I2C bus for NAU7802 (address 0x2A)
+        drdy: ADS1256 data ready (active low)
+        current_sense: Differential input from TIA for current measurement
+        voltage_sense: Differential input for cell voltage measurement
+    """
+
+    # --- External interfaces ---
+    power_analog = new ElectricPower
+    """5V clean analog supply for ADS1256 AVDD"""
+    power_analog.required = True
+    assert power_analog.voltage within 4.75V to 5.25V
+
+    power_digital = new ElectricPower
+    """3.3V supply for both ADCs (NAU7802 + ADS1256 DVDD)"""
+    power_digital.required = True
+    assert power_digital.voltage within 2.7V to 3.6V
+
+    spi = new SPI
+    """SPI bus for ADS1256 fast ADC"""
+
+    spi_cs = new ElectricLogic
+    """ADS1256 SPI chip select (active low)"""
+
+    i2c = new I2C
+    """I2C bus for NAU7802 slow ADC (address 0x2A)"""
+
+    drdy = new ElectricLogic
+    """ADS1256 data ready output (active low)"""
+
+    current_sense = new DifferentialPair
+    """Differential input from TIA output for current measurement"""
+    current_sense.required = True
+
+    voltage_sense = new DifferentialPair
+    """Differential input for cell voltage measurement (V_WE - V_RE)"""
+    voltage_sense.required = True
+
+    # --- Fast ADC: ADS1256 (SPI, 30 kSPS) ---
+    fast_adc = new ADS1256_driver
+
+    power_analog ~ fast_adc.power_analog
+    power_digital ~ fast_adc.power_digital
+    spi ~ fast_adc.spi
+    spi_cs ~ fast_adc.cs
+    drdy ~ fast_adc.drdy
+
+    # ADS1256 reference: use AVDD/AGND as reference (internal 2.5V also available)
+    fast_adc.vref.hv ~ power_analog.hv
+    fast_adc.vref.lv ~ power_analog.lv
+
+    # --- Slow ADC: NAU7802 (I2C, 320 SPS) ---
+    slow_adc = new Nuvoton_NAU7802_Dual
+
+    power_digital ~ slow_adc.power_digital
+    power_digital ~ slow_adc.power_analog
+    i2c ~ slow_adc.i2c
+
+    # --- Input protection resistors (shared, before split to both ADCs) ---
+    # 1kohm series on each analog input for ESD/overvoltage protection
+    prot_r_ch1_p = new Resistor
+    prot_r_ch1_p.resistance = 1kohm +/- 1%
+    prot_r_ch1_p.package = "0402"
+
+    prot_r_ch1_n = new Resistor
+    prot_r_ch1_n.resistance = 1kohm +/- 1%
+    prot_r_ch1_n.package = "0402"
+
+    prot_r_ch2_p = new Resistor
+    prot_r_ch2_p.resistance = 1kohm +/- 1%
+    prot_r_ch2_p.package = "0402"
+
+    prot_r_ch2_n = new Resistor
+    prot_r_ch2_n.resistance = 1kohm +/- 1%
+    prot_r_ch2_n.package = "0402"
+
+    # --- Channel 1: current sense ---
+    # Shared protection -> split to both ADCs
+    current_sense.p.line ~> prot_r_ch1_p ~> fast_adc.current_sense.p.line
+    current_sense.n.line ~> prot_r_ch1_n ~> fast_adc.current_sense.n.line
+
+    # NAU7802 channel 1 (slow path) taps after protection resistors
+    fast_adc.current_sense.p.line ~ slow_adc.sense_inputs[0].p.line
+    fast_adc.current_sense.n.line ~ slow_adc.sense_inputs[0].n.line
+
+    # --- Channel 2: voltage sense ---
+    voltage_sense.p.line ~> prot_r_ch2_p ~> fast_adc.voltage_sense.p.line
+    voltage_sense.n.line ~> prot_r_ch2_n ~> fast_adc.voltage_sense.n.line
+
+    # NAU7802 channel 2 (slow path) taps after protection resistors
+    fast_adc.voltage_sense.p.line ~ slow_adc.sense_inputs[1].p.line
+    fast_adc.voltage_sense.n.line ~ slow_adc.sense_inputs[1].n.line
