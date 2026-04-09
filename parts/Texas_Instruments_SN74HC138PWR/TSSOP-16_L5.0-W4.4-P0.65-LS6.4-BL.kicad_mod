@@ -1,0 +1,359 @@
+(footprint "TSSOP-16_L5.0-W4.4-P0.65-LS6.4-BL"
+	(version 20241209)
+	(generator "ai-eda-jlc-mcp")
+	(layer "F.Cu")
+	(descr "2V~6V 3/8 38ns@6V,50pF 5.2mA 5.2mA 80uA Single Supply TSSOP-16 Signal Switches, Multiplexers, Decoders ROHS")
+	(tags "component")
+	(property "Reference" "REF**"
+		(at 0 -5.48 0)
+		(layer "F.SilkS")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "SN74HC138PWR"
+		(at 0 5.5 0)
+		(layer "F.Fab")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" "2V~6V 3/8 38ns@6V,50pF 5.2mA 5.2mA 80uA Single Supply TSSOP-16 Signal Switches, Multiplexers, Decoders ROHS"
+		(at 0 0 0)
+		(layer "F.Fab")
+		hide
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "LCSC" "C157527"
+		(at 0 0 0)
+		(layer "F.Fab")
+		hide
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Manufacturer" "TI(德州仪器)"
+		(at 0 0 0)
+		(layer "F.Fab")
+		hide
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Propagation Delay" "38ns@6V,50pF"
+		(at 0 0 0)
+		(layer "F.Fab")
+		hide
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Type" "Decoder"
+		(at 0 0 0)
+		(layer "F.Fab")
+		hide
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Number of lines" "3/8"
+		(at 0 0 0)
+		(layer "F.Fab")
+		hide
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Voltage - Supply" "2V~6V"
+		(at 0 0 0)
+		(layer "F.Fab")
+		hide
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Quiescent Current" "80uA"
+		(at 0 0 0)
+		(layer "F.Fab")
+		hide
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Current - Output High(IOH)" "5.2mA"
+		(at 0 0 0)
+		(layer "F.Fab")
+		hide
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Voltage Supply Source" "Single Supply"
+		(at 0 0 0)
+		(layer "F.Fab")
+		hide
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Current - Output Low(IOL)" "5.2mA"
+		(at 0 0 0)
+		(layer "F.Fab")
+		hide
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Operating temperature" "-40℃~+85℃"
+		(at 0 0 0)
+		(layer "F.Fab")
+		hide
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr smd)
+	(pad "1" smd oval
+		(at -2.2751 2.8658)
+		(size 0.343 1.7315)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+	)
+	(pad "2" smd oval
+		(at -1.6251 2.8658)
+		(size 0.343 1.7315)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+	)
+	(pad "3" smd oval
+		(at -0.9751 2.8658)
+		(size 0.343 1.7315)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+	)
+	(pad "4" smd oval
+		(at -0.3249 2.8658)
+		(size 0.343 1.7315)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+	)
+	(pad "5" smd oval
+		(at 0.3251 2.8658)
+		(size 0.343 1.7315)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+	)
+	(pad "6" smd oval
+		(at 0.9751 2.8658)
+		(size 0.343 1.7315)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+	)
+	(pad "7" smd oval
+		(at 1.6251 2.8658)
+		(size 0.343 1.7315)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+	)
+	(pad "8" smd oval
+		(at 2.2751 2.8658)
+		(size 0.343 1.7315)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+	)
+	(pad "16" smd oval
+		(at -2.2751 -2.8658)
+		(size 0.343 1.7315)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+	)
+	(pad "15" smd oval
+		(at -1.6251 -2.8658)
+		(size 0.343 1.7315)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+	)
+	(pad "14" smd oval
+		(at -0.9751 -2.8658)
+		(size 0.343 1.7315)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+	)
+	(pad "13" smd oval
+		(at -0.3249 -2.8658)
+		(size 0.343 1.7315)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+	)
+	(pad "12" smd oval
+		(at 0.3251 -2.8658)
+		(size 0.343 1.7315)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+	)
+	(pad "11" smd oval
+		(at 0.9751 -2.8658)
+		(size 0.343 1.7315)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+	)
+	(pad "10" smd oval
+		(at 1.6251 -2.8658)
+		(size 0.343 1.7315)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+	)
+	(pad "9" smd oval
+		(at 2.2751 -2.8658)
+		(size 0.343 1.7315)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+	)
+	(fp_line
+		(start -2.5762 1.7713)
+		(end -2.5762 -1.7715)
+		(stroke
+			(width 0.15)
+			(type solid)
+		)
+		(layer "F.SilkS")
+	)
+	(fp_line
+		(start -2.5762 -1.7715)
+		(end 2.5762 -1.7715)
+		(stroke
+			(width 0.15)
+			(type solid)
+		)
+		(layer "F.SilkS")
+	)
+	(fp_line
+		(start 2.5762 -1.7715)
+		(end 2.5762 1.7713)
+		(stroke
+			(width 0.15)
+			(type solid)
+		)
+		(layer "F.SilkS")
+	)
+	(fp_line
+		(start 2.5762 1.7713)
+		(end -2.5762 1.7713)
+		(stroke
+			(width 0.15)
+			(type solid)
+		)
+		(layer "F.SilkS")
+	)
+	(fp_circle
+		(center -2.5 3.1999)
+		(end -2.47 3.1999)
+		(stroke
+			(width 0.06)
+			(type solid)
+		)
+		(layer "F.Fab")
+	)
+	(fp_circle
+		(center -2.032 1.27)
+		(end -1.8819 1.27)
+		(stroke
+			(width 0.3)
+			(type solid)
+		)
+		(layer "F.SilkS")
+	)
+	(fp_circle
+		(center -2.8989 2.8658)
+		(end -2.7488 2.8658)
+		(stroke
+			(width 0.3)
+			(type solid)
+		)
+		(layer "F.SilkS")
+	)
+	(fp_circle
+		(center -2.2751 3.5998)
+		(end -2.125 3.5998)
+		(stroke
+			(width 0.3)
+			(type solid)
+		)
+		(layer "Cmts.User")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 0 0)
+		(layer "F.Fab")
+		(effects
+			(font
+				(size 0.5 0.5)
+				(thickness 0.08)
+			)
+		)
+	)
+	(fp_line
+		(start -3.39 -3.98)
+		(end 3.39 -3.98)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+	)
+	(fp_line
+		(start 3.39 -3.98)
+		(end 3.39 4)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+	)
+	(fp_line
+		(start 3.39 4)
+		(end -3.39 4)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+	)
+	(fp_line
+		(start -3.39 4)
+		(end -3.39 -3.98)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+	)
+	(embedded_fonts no)
+)

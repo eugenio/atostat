@@ -15,6 +15,9 @@ from "lib/b0505s_no_ycap.ato" import B0505S_NoYcap_driver
 from "atopile/ti-iso1640x/ti-iso1640x.ato" import TI_ISO1640QDWRQ1
 from "atopile/st-ldk220/st-ldk220.ato" import LDK220M_R
 from "lib/iso7741.ato" import ISO7741_driver
+# TPS60403 charge pump for -5V is available in lib/tps60403.ato but not
+# instantiated here yet. Connecting it causes the atopile solver to hang,
+# likely due to the inverted power_out model (hv=GND, lv=VOUT). See TODO below.
 
 
 module GalvanicIsolator:
@@ -49,6 +52,14 @@ module GalvanicIsolator:
 
     isolated_power = new ElectricPower
     """Backward-compatible alias to isolated_power_raw (5V)"""
+
+    # TODO: Add isolated -5V rail and bipolar supply for analog op-amps.
+    # The TPS60403 charge pump (lib/tps60403.ato) generates -VIN from +VIN,
+    # but its inverted power model (hv=GND, lv=VOUT) causes the atopile
+    # solver to hang. Requires either an atopile fix for inverted supplies
+    # or a different modeling approach. Also requires refactoring
+    # control_amplifier, re_buffer, and switched_gain_tia to separate
+    # op-amp power rails from signal references (which must stay at iso_GND).
 
     # --- Isolated digital GPIO interfaces (Task 4) ---
     isolated_gpio_out = new ElectricLogic[3]

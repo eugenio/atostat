@@ -67,6 +67,9 @@ module PotentiostatChannel:
     host_spi_cs = new ElectricLogic
     """SPI chip select from gateway CS demux (active low, through SPI isolator)"""
 
+    host_spi_power = new ElectricPower
+    """3.3V logic power for host-side SPI isolator (matches gateway voltage level)"""
+
     ce = new ElectricSignal
     """Counter electrode connection"""
     ce.required = True
@@ -124,7 +127,7 @@ module PotentiostatChannel:
     # --- SPI isolator for host communication ---
     spi_iso = new SPIIsolator
     """Isolated SPI for gateway <-> channel RP2040"""
-    spi_iso.host_power ~ host_power
+    spi_iso.host_power ~ host_spi_power
     spi_iso.isolated_power ~ isolator.isolated_power_digital
     spi_iso.isolated_spi ~ controller.host_spi
     spi_iso.isolated_cs ~ controller.host_spi_cs
@@ -187,7 +190,7 @@ module PotentiostatChannel:
 
     tia.power ~ isolated_power
 
-    # TIA non-inverting input to isolated ground
+    # TIA non-inverting input to isolated ground (0V, between +5V and -5V)
     tia.ground_ref ~ isolated_power.lv
 
     # TIA current output -> mode switch TIA feedback input

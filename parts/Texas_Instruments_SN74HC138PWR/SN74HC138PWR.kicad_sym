@@ -1,0 +1,559 @@
+(kicad_symbol_lib
+	(version 20241209)
+	(generator "jlc-mcp")
+	(generator_version "9.0")
+	(symbol "SN74HC138PWR"
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(property "Reference" "U"
+			(at 0 10.16 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "SN74HC138PWR"
+			(at 0 7.62 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "JLC-MCP:TSSOP-16_L5.0-W4.4-P0.65-LS6.4-BL"
+			(at -1.778 0 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "https://www.lcsc.com/datasheet/lcsc_datasheet_1809291531_Texas-Instruments-SN74HC138PWR_C157527.pdf"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Product Page" "https://lcsc.com/product-detail/74-Series_TI_SN74HC138PWR_SN74HC138PWR_C157527.html"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "2V~6V 3/8 38ns@6V,50pF 5.2mA 5.2mA 80uA Single Supply TSSOP-16 Signal Switches, Multiplexers, Decoders ROHS"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC" "C157527"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "TI(德州仪器)"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "ki_keywords" "C157527"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Stock" "661"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Price" "0.196USD"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Process" "SMT"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Minimum Qty" "1"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Attrition Qty" "0"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Class" "Extended Part"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part" "SN74HC138PWR"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Propagation Delay" "38ns@6V,50pF"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Type" "Decoder"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Number of lines" "3/8"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Voltage - Supply" "2V~6V"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Quiescent Current" "80uA"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Current - Output High(IOH)" "5.2mA"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Voltage Supply Source" "Single Supply"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Current - Output Low(IOL)" "5.2mA"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Operating temperature" "-40℃~+85℃"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(symbol "SN74HC138PWR_0_1"
+			(rectangle
+				(start -7.62 11.938)
+				(end 7.62 -11.938)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type background)
+				)
+			)
+			(circle
+				(center -6.35 10.668)
+				(radius 0.381)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(circle
+				(center -6.35 10.668)
+				(radius 0.381)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+		)
+		(symbol "SN74HC138PWR_1_1"
+			(pin unspecified line
+				(at -10.16 8.89 0)
+				(length 2.54)
+				(name "A"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+				(number "1"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+			)
+			(pin unspecified line
+				(at -10.16 6.35 0)
+				(length 2.54)
+				(name "B"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+				(number "2"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+			)
+			(pin unspecified line
+				(at -10.16 3.81 0)
+				(length 2.54)
+				(name "C"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+				(number "3"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+			)
+			(pin unspecified line
+				(at -10.16 1.27 0)
+				(length 2.54)
+				(name "#G2A"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+				(number "4"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+			)
+			(pin unspecified line
+				(at -10.16 -1.27 0)
+				(length 2.54)
+				(name "#G2B"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+				(number "5"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+			)
+			(pin unspecified line
+				(at -10.16 -3.81 0)
+				(length 2.54)
+				(name "G1"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+				(number "6"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+			)
+			(pin unspecified line
+				(at -10.16 -6.35 0)
+				(length 2.54)
+				(name "Y7"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+				(number "7"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+			)
+			(pin unspecified line
+				(at -10.16 -8.89 0)
+				(length 2.54)
+				(name "GND"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+				(number "8"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+			)
+			(pin unspecified line
+				(at 10.16 -8.89 180)
+				(length 2.54)
+				(name "Y6"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+				(number "9"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+			)
+			(pin unspecified line
+				(at 10.16 -6.35 180)
+				(length 2.54)
+				(name "Y5"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+				(number "10"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+			)
+			(pin unspecified line
+				(at 10.16 -3.81 180)
+				(length 2.54)
+				(name "Y4"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+				(number "11"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+			)
+			(pin unspecified line
+				(at 10.16 -1.27 180)
+				(length 2.54)
+				(name "Y3"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+				(number "12"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+			)
+			(pin unspecified line
+				(at 10.16 1.27 180)
+				(length 2.54)
+				(name "Y2"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+				(number "13"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+			)
+			(pin unspecified line
+				(at 10.16 3.81 180)
+				(length 2.54)
+				(name "Y1"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+				(number "14"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+			)
+			(pin unspecified line
+				(at 10.16 6.35 180)
+				(length 2.54)
+				(name "Y0"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+				(number "15"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+			)
+			(pin unspecified line
+				(at 10.16 8.89 180)
+				(length 2.54)
+				(name "VCC"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+				(number "16"
+					(effects
+						(font
+							(size 1 1)
+						)
+					)
+				)
+			)
+		)
+		(embedded_fonts no)
+	)
+)

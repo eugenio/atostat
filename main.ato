@@ -19,14 +19,13 @@ module App:
     """
     Top-level atostat application.
 
-    Single-channel potentiostat with power supply and WiFi/USB connectivity.
-    Expandable to multichannel by adding more PotentiostatChannel instances.
+    Two-channel potentiostat with power supply and WiFi/USB connectivity.
+    Each channel is independently isolated and addressable via SPI CS demux.
 
     External connections:
         power_in: 5-12V DC input (barrel jack or USB)
         ce0/re0/we0: Electrode connectors for channel 0
-        cell_enable0: Cell disconnect control for channel 0
-        mode_select0: Potentiostat/galvanostat mode for channel 0
+        ce1/re1/we1: Electrode connectors for channel 1
         trigger_in: External trigger input (from lab instruments)
         sync_out: Sync pulse output (to lab instruments)
     """
@@ -104,3 +103,37 @@ module App:
 
     # --- Per-channel SPI chip select (via 74HC138 demux) ---
     gateway.channel_cs[0] ~ ch0.host_spi_cs
+
+    # SPI isolator host side powered from gateway 3.3V (not channel 5V)
+    ch0.host_spi_power ~ psu.power_3v3
+
+    # --- Channel 1: Second potentiostat channel ---
+    ch1 = new PotentiostatChannel
+    """Potentiostat channel 1"""
+
+    ch1.host_power ~ psu.power_5v
+    ch1.host_i2c ~ gateway.channel_i2c[1]
+
+    ce1 = new ElectricSignal
+    """Counter electrode connector for channel 1"""
+    re1 = new ElectricSignal
+    """Reference electrode connector for channel 1"""
+    we1 = new ElectricSignal
+    """Working electrode connector for channel 1"""
+
+    ce1 ~ ch1.ce
+    re1 ~ ch1.re
+    we1 ~ ch1.we
+
+    cell_enable1 = new ElectricLogic
+    """Cell disconnect switch for channel 1 (high = connected)"""
+    cell_enable1 ~ ch1.cell_enable
+
+    mode_select1 = new ElectricLogic
+    """Potentiostat/galvanostat mode for channel 1 (low = potentiostat)"""
+    mode_select1 ~ ch1.mode_select
+
+    # SPI: shared bus, individual CS from demux
+    ch1.host_spi ~ gateway.channel_spi
+    gateway.channel_cs[1] ~ ch1.host_spi_cs
+    ch1.host_spi_power ~ psu.power_3v3
